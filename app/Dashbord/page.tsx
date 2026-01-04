@@ -81,6 +81,7 @@ export default function Dashboard() {
 
       <div className={`fixed left-0 top-16 bottom-0 bg-white transition-all shadow-sm ${sidebarOpen ? 'w-64' : 'w-0'}`} style={{ borderRight: '1px solid #E5E7EB' }}>
         <div className="p-4 space-y-1 overflow-hidden">
+          
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
             <LayoutDashboard className="w-5 h-5" />
             <span className="font-medium">Dashboard</span>
@@ -91,20 +92,24 @@ export default function Dashboard() {
             <span className="font-medium">Trips</span>
           </button>
           </Link>
-          <Link href={'/Driver'}>
+          <Link href={'Dashbord/Driver'}>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: '#5A6C7D' }}>
             <Users className="w-5 h-5" />
             <span className="font-medium">Drivers</span>
           </button>
           </Link>
+          <Link href={'Dashbord/Car'}>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: '#5A6C7D' }}>
             <Car className="w-5 h-5" />
             <span className="font-medium">Vehicles</span>
           </button>
+          </Link>
+           <Link href={'/Trip/Report'}>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: '#5A6C7D' }}>
             <FileText className="w-5 h-5" />
             <span className="font-medium">Reports</span>
           </button>
+          </Link>
           <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors" style={{ color: '#5A6C7D' }}>
             <Calendar className="w-5 h-5" />
             <span className="font-medium">Bookings</span>

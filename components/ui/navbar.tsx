@@ -87,9 +87,11 @@ function Navbar() {
               Login
             </button>
             </Link>
+             <Link href='/Auth/getStarted'>
             <button className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5">
               Get Started Free
             </button>
+            </Link>
           </div>
 
           <button
