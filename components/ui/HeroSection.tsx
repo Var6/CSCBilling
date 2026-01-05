@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HeroSection() {
   return (
     <section className="pt-32 pb-20 px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 to-white">
@@ -17,12 +19,17 @@ export default function HeroSection() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/Auth/getStarted">
               <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transform hover:-translate-y-1">
                 Get Started Free
               </button>
+              </Link>
+              <Link href="/Auth/login">
               <button className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg border-2 border-blue-600 hover:bg-blue-50 transition-all duration-200">
                 Login
               </button>
+            </Link>  
+            
             </div>
             
             <div className="flex items-center gap-6 text-sm text-gray-600">
