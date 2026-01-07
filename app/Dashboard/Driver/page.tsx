@@ -99,8 +99,8 @@ export default function DriversPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
-        <div className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen mb-9" style={{ backgroundColor: '#F8F9FA' }}>
+        <div className="mb-10 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Drivers Management</h1>
             <p style={{ color: '#5A6C7D' }}>Manage your driver fleet</p>

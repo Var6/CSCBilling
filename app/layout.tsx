@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import TripEaseNavbar from "@/components/ui/navbar";
-import Footer from "@/components/ui/footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,10 +14,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TripEase",
-  description: "TripEase public pages",
+  description: "TripEase App",
 };
 
-export default function PublicLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -29,9 +27,7 @@ export default function PublicLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <TripEaseNavbar />
-        <main>{children}</main>
-        <Footer />
+        {children}
       </body>
     </html>
   );
