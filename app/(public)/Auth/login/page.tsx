@@ -8,21 +8,36 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleSubmit = async () => {
-    setLoading(true);
-    setMessage(null);
+const handleSubmit = async () => {
+      setLoading(true);
+  setMessage(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-    if (email === 'admin@tripease.com' && password === 'demo123') {
-      setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
-      setTimeout(() => setLoading(false), 500);
+    const data = await response.json();
+
+    if (!response.ok) {
+      setMessage({ type: 'error', text: data.error || 'Login failed' });
     } else {
-      setMessage({ type: 'error', text: 'Invalid email or password. Please try again.' });
-      setLoading(false);
-    }
-  };
+       const userData = await response.json(); // should include name, email, role, etc.
+       localStorage.setItem('user', JSON.stringify(userData));
 
+      setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
+      setTimeout(() => {
+        window.location.href = '/Dashboard'; // Redirect to dashboard
+      }, 800);
+    }
+  } catch (err) {
+    setMessage({ type: 'error', text: 'Server error. Try again.' });
+  } finally {
+    setLoading(false);
+  }
+};
   const handleKeyPress = (e:any) => {
     if (e.key === 'Enter' && email && password) {
       handleSubmit();

@@ -14,7 +14,9 @@ import {
 
 interface SidebarProps {
   sidebarOpen: boolean;
+  user?: { admin_full_name: string; role: string; admin_email: string }; // adjust as needed
 }
+
 
 const menuItems = [
   { label: 'Dashboard', href: '/Dashboard', icon: LayoutDashboard },
@@ -31,7 +33,7 @@ export default function Sidebar({ sidebarOpen }: SidebarProps) {
   return (
     <aside
       className={`fixed left-0 top-0 h-screen bg-white transition-all duration-300 z-40
-        ${sidebarOpen ? 'w-64' : 'w-16'}
+        ${sidebarOpen ? 'w-50' : 'w-16'}
       `}
       style={{ borderRight: '1px solid #b1b7bd' }}
     >
@@ -71,24 +73,25 @@ export default function Sidebar({ sidebarOpen }: SidebarProps) {
 
         {/* Logout */}
         <div className="pt-4 mt-4 border-t border-gray-300">
-          <button
-            className={`w-full flex items-center py-3 rounded-lg transition-all duration-300 text-red-500
-              ${sidebarOpen ? 'px-3 gap-3 justify-start' : 'px-2 justify-center'}
-              hover:bg-red-50
-            `}
-          >
-            <LogOut className="w-5 h-5 shrink-0" />
-
-            <span
-              className={`font-medium whitespace-nowrap transition-all duration-300
-                ${sidebarOpen
-                  ? 'opacity-100 ml-2'
-                  : 'opacity-0 w-0 overflow-hidden'}
-              `}
-            >
-              Logout
-            </span>
-          </button>
+         <button
+            onClick={() => {
+      localStorage.removeItem('user');
+    window.location.href = '/Auth/login';
+     }}
+  className={`w-full flex items-center py-3 rounded-lg transition-all duration-300 text-red-500
+    ${sidebarOpen ? 'px-3 gap-3 justify-start' : 'px-2 justify-center'}
+    hover:bg-red-50
+  `}
+>
+  <LogOut className="w-5 h-5 shrink-0" />
+  <span
+    className={`font-medium whitespace-nowrap transition-all duration-300
+      ${sidebarOpen ? 'opacity-100 ml-2' : 'opacity-0 w-0 overflow-hidden'}
+    `}
+  >
+    Logout
+  </span>
+</button>
         </div>
       </div>
     </aside>

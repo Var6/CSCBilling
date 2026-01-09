@@ -1,7 +1,7 @@
 'use client';
 import { Car, Users, TrendingUp, DollarSign, AlertCircle, Menu, Bell, Search, Settings, LogOut, LayoutDashboard, MapPin, FileText, Calendar } from 'lucide-react';
 
-export default function Topbar({ sidebarOpen, setSidebarOpen }: any) {
+export default function Topbar({ sidebarOpen, setSidebarOpen, user }: { sidebarOpen: boolean; setSidebarOpen: any; user: any }) {
   return (
     <div className="fixed top-0 left-0 right-0 h-16 bg-white flex items-center px-6 z-50 border-b">
       <div className="fixed top-0 left-0 right-0 h-16 bg-white flex items-center px-6 shadow-sm z-50" style={{ borderBottom: '1px solid #E5E7EB' }}>
