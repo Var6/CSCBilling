@@ -128,6 +128,7 @@ export default function CompanySignUp(): React.ReactElement {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(payload)
       });
 
@@ -137,7 +138,12 @@ export default function CompanySignUp(): React.ReactElement {
         throw new Error(data.error || 'Signup failed');
       }
 
-      router.push('/dashboard');
+      // Store user info locally so Dashboard layout can detect session
+      if (data?.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      router.push('/Dashboard');
     } catch (error: any) {
       setSubmitError(error?.message || 'Something went wrong');
     } finally {

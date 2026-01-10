@@ -74,9 +74,14 @@ export default function Sidebar({ sidebarOpen }: SidebarProps) {
         {/* Logout */}
         <div className="pt-4 mt-4 border-t border-gray-300">
          <button
-            onClick={() => {
+            onClick={async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } catch (e) {
+        console.error('Logout failed', e);
+      }
       localStorage.removeItem('user');
-    window.location.href = '/Auth/login';
+      window.location.href = '/Auth/login';
      }}
   className={`w-full flex items-center py-3 rounded-lg transition-all duration-300 text-red-500
     ${sidebarOpen ? 'px-3 gap-3 justify-start' : 'px-2 justify-center'}

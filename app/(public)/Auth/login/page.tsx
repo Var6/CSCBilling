@@ -1,43 +1,61 @@
 'use client';
 import React, { useState } from 'react';
 import { Car, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const router = useRouter();
 
 const handleSubmit = async () => {
-      setLoading(true);
+  setLoading(true);
   setMessage(null);
 
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await response.json();
+    const data = await response.json(); // ✅ read ONCE
 
     if (!response.ok) {
-      setMessage({ type: 'error', text: data.error || 'Login failed' });
-    } else {
-       const userData = await response.json(); // should include name, email, role, etc.
-       localStorage.setItem('user', JSON.stringify(userData));
-
-      setMessage({ type: 'success', text: 'Login successful! Redirecting...' });
-      setTimeout(() => {
-        window.location.href = '/Dashboard'; // Redirect to dashboard
-      }, 800);
+      setMessage({
+        type: 'error',
+        text: data.error || 'Invalid email or password',
+      });
+      return;
     }
+
+    // Store user locally; token is set as an HttpOnly cookie by the server
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    setMessage({
+      type: 'success',
+      text: 'Login successful! Redirecting...',
+    });
+
+    // Use router.push so client-side navigation happens smoothly
+    setTimeout(() => {
+      router.push('/Dashboard');
+    }, 400);
+
   } catch (err) {
-    setMessage({ type: 'error', text: 'Server error. Try again.' });
+    console.error(err);
+    setMessage({
+      type: 'error',
+      text: 'Server error. Try again.',
+    });
   } finally {
     setLoading(false);
   }
 };
+
   const handleKeyPress = (e:any) => {
     if (e.key === 'Enter' && email && password) {
       handleSubmit();

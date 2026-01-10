@@ -1,51 +1,79 @@
-// app/api/auth/login/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import mariadb from 'mariadb';
+import { NextResponse } from 'next/server'
+import { connectDB } from '@/lib/mongodb'
+import CompanyAdmin from '@/models/CompanyAdmin'
+import { comparePassword } from '@/lib/auth'
+import { signToken } from '@/lib/jwt'
 
-const pool = mariadb.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT) || 3306,
-  connectionLimit: 5,
-});
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json();
+    await connectDB()
+    const body = await req.json()
+
+    const { email, password } = body
 
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email and password required' },
+        { status: 400 }
+      )
     }
 
-    const conn = await pool.getConnection();
-    try {
-      const rows = await conn.query(
-        `SELECT admin_email, password_hash, admin_full_name 
-         FROM company_admins 
-         WHERE admin_email = ? LIMIT 1`,
-        [email]
-      );
+    // 🔍 Find by admin or official email
+    const user = await CompanyAdmin.findOne({
+      $or: [
+        { adminEmail: email },
+        { officialEmail: email },
+      ],
+    })
 
-      if (!rows || rows.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 401 });
-      }
-
-      const user = rows[0];
-
-      // FOR TESTING: plaintext password check
-      if (password !== user.password_hash) {
-        return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
-      }
-
-      // Login successful
-      return NextResponse.json({ message: 'Login successful', user: { email: user.admin_email, name: user.admin_full_name } });
-    } finally {
-      conn.release();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      )
     }
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+
+    // 🔐 Verify password
+    const isValid = await comparePassword(password, user.passwordHash)
+
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      )
+    }
+
+    // 🎟️ Create JWT
+    const token = signToken({
+      userId: user._id,
+      role: user.role,
+      companyName: user.companyName,
+    })
+
+    // 🍪 Set token cookie (same as signup)
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        id: user._id,
+        role: user.role,
+        companyName: user.companyName,
+        adminEmail: user.adminEmail,
+      },
+    })
+
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    })
+
+    return response
+  } catch (error) {
+    console.error('Login error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
