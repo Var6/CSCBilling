@@ -347,7 +347,11 @@ export default function VehiclesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVehicles.map(vehicle => {
+         {filteredVehicles
+  .filter(v => v._id && v.plate)
+  .map(vehicle => {
+
+
             const statusStyle = getStatusStyle(vehicle.status);
             const StatusIcon = statusStyle.icon;
             const insuranceStatus = getInsuranceStatus(vehicle.insuranceExpiry);

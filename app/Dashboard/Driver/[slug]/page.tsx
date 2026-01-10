@@ -30,9 +30,10 @@ interface Vehicle {
 }
 
 export default function DriverDetailPage() {
-  const params = useParams();
+  const params = useParams<{ id?: string }>();
+  const driverId = params?.id;
+
   const router = useRouter();
-  const driverId = params.id as string;
 
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,25 +45,22 @@ export default function DriverDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'details'>('overview');
 
 useEffect(() => {
-  if (!driverId) return;
-
-  fetchDriver();
-  fetchVehicles();
-}, [driverId]);
-const fetchDriver = async () => {
-  try {
-    const res = await fetch(`/api/driver/${driverId}`);
-    if (!res.ok) throw new Error('Failed to fetch driver');
-
-    const data = await res.json();
-    setDriver(data);
-  } catch (error) {
-    console.error('Error fetching driver:', error);
-  } finally {
+  if (!driverId) {
     setLoading(false);
+    return;
   }
-};
 
+  Promise.all([fetchDriver(), fetchVehicles()])
+    .catch(console.error)
+    .finally(() => setLoading(false));
+}, [driverId]);
+
+const fetchDriver = async () => {
+  const res = await fetch(`/api/driver/${driverId}`);
+  if (!res.ok) throw new Error('Failed to fetch driver');
+  const data = await res.json();
+  setDriver(data);
+};
   const fetchVehicles = async () => {
     try {
       const res = await fetch('/api/vehicles');
