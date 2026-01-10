@@ -1,10 +1,11 @@
 'use client';
-import React, { useState } from 'react';
-import { Car, User, ArrowLeft, Edit, Plus, Bell, Wrench, FileText, DollarSign, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, MapPin, Star, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Car, ArrowLeft, Edit, Plus, Wrench, FileText, DollarSign, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, MapPin, X, User, Star, Bell } from 'lucide-react';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 
 interface Vehicle {
-  id: number;
+  _id: string;
   name: string;
   plate: string;
   model: string;
@@ -19,14 +20,17 @@ interface Vehicle {
   pollutionExpiry: string;
   fitness: string;
   fitnessExpiry: string;
-  assignedDriver: { id: number; name: string } | null;
+  rcNumber: string;
+  assignedDriverId: string | null;
+  assignedDriverName: string | null;
   totalEarnings: number;
   monthlyEarnings: number;
   totalTrips: number;
+  maintenanceRecords: MaintenanceRecord[];
 }
 
 interface MaintenanceRecord {
-  id: number;
+  _id?: string;
   date: string;
   type: string;
   description: string;
@@ -36,7 +40,7 @@ interface MaintenanceRecord {
 }
 
 interface Driver {
-  id: number;
+  _id: string;
   name: string;
   phone: string;
   rating: number;
@@ -44,46 +48,19 @@ interface Driver {
   status: 'available' | 'on-trip' | 'offline';
 }
 
-export default function VehicleSlugPage() {
+export default function VehicleDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const vehicleId = params.slug as string;
+
+
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
   const [showDriverModal, setShowDriverModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'documents'>('overview');
-
-  const [vehicle, setVehicle] = useState<Vehicle>({
-    id: 1,
-    name: 'Toyota Camry',
-    plate: 'ABC123',
-    model: '2022 Camry Hybrid',
-    year: 2022,
-    status: 'in-use',
-    color: 'Silver',
-    fuelType: 'Hybrid',
-    mileage: '45,230 km',
-    insurance: 'Policy #INS-2024-001',
-    insuranceExpiry: '2025-06-15',
-    pollution: 'PUC-2024-ABC123',
-    pollutionExpiry: '2025-02-10',
-    fitness: 'FIT-2024-ABC123',
-    fitnessExpiry: '2026-08-20',
-    assignedDriver: { id: 1, name: 'Mike Johnson' },
-    totalEarnings: 245680,
-    monthlyEarnings: 42850,
-    totalTrips: 342
-  });
-
-  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([
-    { id: 1, date: '2025-01-05', type: 'Oil Change', description: 'Regular engine oil change with filter replacement', cost: 3500, status: 'completed' },
-    { id: 2, date: '2024-12-20', type: 'Tire Rotation', description: 'All four tires rotated and balanced', cost: 1200, status: 'completed' },
-    { id: 3, date: '2025-01-15', type: 'Brake Service', description: 'Brake pads inspection and cleaning', cost: 2800, status: 'scheduled', nextDue: '2025-01-15' }
-  ]);
-
-  const [availableDrivers] = useState<Driver[]>([
-    { id: 1, name: 'Mike Johnson', phone: '+91 98765 43210', rating: 4.8, trips: 342, status: 'on-trip' },
-    { id: 2, name: 'David Brown', phone: '+91 98765 43211', rating: 4.9, trips: 298, status: 'available' },
-    { id: 3, name: 'Chris Wilson', phone: '+91 98765 43212', rating: 4.7, trips: 275, status: 'available' },
-    { id: 4, name: 'James Taylor', phone: '+91 98765 43213', rating: 4.6, trips: 189, status: 'offline' }
-  ]);
+  const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
 
   const [maintenanceForm, setMaintenanceForm] = useState({
     type: '',
@@ -92,6 +69,47 @@ export default function VehicleSlugPage() {
     date: '',
     status: 'scheduled' as 'completed' | 'pending' | 'scheduled'
   });
+
+  useEffect(() => {
+    fetchVehicle();
+    fetchDrivers();
+  }, [vehicleId]);
+
+  const fetchVehicle = async () => {
+  if (!vehicleId) return;
+
+  try {
+    const res = await fetch(`/api/vehicle/${vehicleId}`, {
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch vehicle: ${res.status}`);
+    }
+
+    const data = await res.json();
+    setVehicle(data);
+  } catch (error) {
+    console.error('Error fetching vehicle:', error);
+    alert('Failed to load vehicle');
+    router.push('/Dashboard/Car');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch('/api/drivers');
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableDrivers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+    }
+  };
 
   const getStatusStyle = (status: string) => {
     switch(status) {
@@ -116,35 +134,115 @@ export default function VehicleSlugPage() {
     return { color: '#10B981', text: 'Valid', icon: CheckCircle };
   };
 
-  const statusStyle = getStatusStyle(vehicle.status);
+  const handleAddMaintenance = async () => {
+    if (!vehicle || !maintenanceForm.type || !maintenanceForm.description || !maintenanceForm.cost || !maintenanceForm.date) {
+      alert('Please fill all fields');
+      return;
+    }
 
-  const handleAddMaintenance = () => {
-    if (maintenanceForm.type && maintenanceForm.description && maintenanceForm.cost && maintenanceForm.date) {
-      const newRecord: MaintenanceRecord = {
-        id: maintenanceRecords.length + 1,
+    try {
+      const newRecord = {
         date: maintenanceForm.date,
         type: maintenanceForm.type,
         description: maintenanceForm.description,
         cost: parseFloat(maintenanceForm.cost),
         status: maintenanceForm.status
       };
-      setMaintenanceRecords([newRecord, ...maintenanceRecords]);
+
+      const updatedRecords = [newRecord, ...(vehicle.maintenanceRecords || [])];
+
+      const res = await fetch(`/api/vehicle/${vehicleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maintenanceRecords: updatedRecords })
+      });
+
+      if (!res.ok) throw new Error('Failed to add maintenance record');
+
       setMaintenanceForm({ type: '', description: '', cost: '', date: '', status: 'scheduled' });
       setShowMaintenanceModal(false);
+      fetchVehicle();
+      alert('Maintenance record added successfully!');
+    } catch (error) {
+      console.error('Error adding maintenance:', error);
+      alert('Failed to add maintenance record');
     }
   };
 
-  const handleAssignDriver = (driver: Driver) => {
-    setVehicle({ ...vehicle, assignedDriver: { id: driver.id, name: driver.name } });
-    setShowDriverModal(false);
-  };
+  const handleAssignDriver = async (driver: Driver) => {
+    if (!vehicle) return;
 
-  const handleUnassignDriver = () => {
-    if (window.confirm('Are you sure you want to unassign the current driver?')) {
-      setVehicle({ ...vehicle, assignedDriver: null });
+    try {
+      const res = await fetch(`/api/vehicle/${vehicleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignedDriverId: driver._id,
+          assignedDriverName: driver.name
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to assign driver');
+
+      setShowDriverModal(false);
+      fetchVehicle();
+      alert('Driver assigned successfully!');
+    } catch (error) {
+      console.error('Error assigning driver:', error);
+      alert('Failed to assign driver');
     }
   };
 
+  const handleUnassignDriver = async () => {
+    if (!vehicle || !confirm('Are you sure you want to unassign the current driver?')) return;
+
+    try {
+      const res = await fetch(`/api/vehicle/${vehicleId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignedDriverId: null,
+          assignedDriverName: null
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to unassign driver');
+
+      fetchVehicle();
+      alert('Driver unassigned successfully!');
+    } catch (error) {
+      console.error('Error unassigning driver:', error);
+      alert('Failed to unassign driver');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8F9FA' }}>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p style={{ color: '#5A6C7D' }}>Loading vehicle...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vehicle) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8F9FA' }}>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2" style={{ color: '#1A2332' }}>Vehicle Not Found</h2>
+          <Link href="/Dashboard/Car">
+            <button className="px-6 py-3 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+              Back to Fleet
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const statusStyle = getStatusStyle(vehicle.status);
   const documents = [
     { name: 'Insurance', number: vehicle.insurance, expiry: vehicle.insuranceExpiry },
     { name: 'Pollution Certificate', number: vehicle.pollution, expiry: vehicle.pollutionExpiry },
@@ -154,13 +252,12 @@ export default function VehicleSlugPage() {
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#F8F9FA' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-6">
           <Link href="/Dashboard/Car">
-          <button className="flex items-center gap-2 mb-4 text-sm font-medium hover:gap-3 transition-all" style={{ color: '#2563EB' }}>
-            <ArrowLeft className="w-4 h-4" />
-            Back to Vehicles
-          </button>
+            <button className="flex items-center gap-2 mb-4 text-sm font-medium hover:gap-3 transition-all" style={{ color: '#2563EB' }}>
+              <ArrowLeft className="w-4 h-4" />
+              Back to Vehicles
+            </button>
           </Link>
           <div className="flex items-center justify-between">
             <div>
@@ -179,7 +276,6 @@ export default function VehicleSlugPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             {/* Vehicle Info Card */}
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
@@ -191,7 +287,7 @@ export default function VehicleSlugPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl font-bold" style={{ color: '#1A2332' }}>{vehicle.name}</h2>
                     <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
-                      {vehicle.status.replace('-', ' ').toUpperCase()}
+                        {(vehicle.status ?? 'unknown').replace('-', ' ').toUpperCase()}
                     </span>
                   </div>
                   <p className="text-lg font-medium mb-1" style={{ color: '#5A6C7D' }}>{vehicle.model}</p>
@@ -202,8 +298,8 @@ export default function VehicleSlugPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: 'Year', value: vehicle.year },
-                  { label: 'Color', value: vehicle.color },
-                  { label: 'Fuel Type', value: vehicle.fuelType },
+                  { label: 'Color', value: vehicle.color || 'N/A' },
+                  { label: 'Fuel Type', value: vehicle.fuelType || 'N/A' },
                   { label: 'Mileage', value: vehicle.mileage }
                 ].map((field, idx) => (
                   <div key={idx}>
@@ -240,7 +336,6 @@ export default function VehicleSlugPage() {
               </div>
 
               <div className="p-6">
-                {/* Overview Tab */}
                 {activeTab === 'overview' && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -258,32 +353,9 @@ export default function VehicleSlugPage() {
                         </div>
                       ))}
                     </div>
-
-                    <div className="pt-4" style={{ borderTop: '1px solid #E5E7EB' }}>
-                      <h4 className="font-bold mb-3" style={{ color: '#1A2332' }}>Recent Activity</h4>
-                      <div className="space-y-3">
-                        {[
-                          { date: '2025-01-08', trip: 'Airport to Downtown', earning: '₹850' },
-                          { date: '2025-01-07', trip: 'Mall to Residential', earning: '₹420' },
-                          { date: '2025-01-06', trip: 'Station to Business District', earning: '₹650' }
-                        ].map((activity, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F8F9FA' }}>
-                            <div className="flex items-center gap-3">
-                              <MapPin className="w-4 h-4" style={{ color: '#2563EB' }} />
-                              <div>
-                                <p className="text-sm font-medium" style={{ color: '#1A2332' }}>{activity.trip}</p>
-                                <p className="text-xs" style={{ color: '#9CA3AF' }}>{activity.date}</p>
-                              </div>
-                            </div>
-                            <span className="font-bold" style={{ color: '#10B981' }}>{activity.earning}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 )}
 
-                {/* Maintenance Tab */}
                 {activeTab === 'maintenance' && (
                   <div>
                     <div className="flex items-center justify-between mb-4">
@@ -298,41 +370,44 @@ export default function VehicleSlugPage() {
                       </button>
                     </div>
 
-                    <div className="space-y-3">
-                      {maintenanceRecords.map((record) => (
-                        <div key={record.id} className="p-4 rounded-lg" style={{ border: '1px solid #E5E7EB' }}>
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F0F9FF' }}>
-                                <Wrench className="w-5 h-5" style={{ color: '#2563EB' }} />
+                    {vehicle.maintenanceRecords && vehicle.maintenanceRecords.length > 0 ? (
+                      <div className="space-y-3">
+                        {vehicle.maintenanceRecords.map((record, idx) => (
+                          <div key={idx} className="p-4 rounded-lg" style={{ border: '1px solid #E5E7EB' }}>
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F0F9FF' }}>
+                                  <Wrench className="w-5 h-5" style={{ color: '#2563EB' }} />
+                                </div>
+                                <div>
+                                  <p className="font-bold" style={{ color: '#1A2332' }}>{record.type}</p>
+                                  <p className="text-xs" style={{ color: '#9CA3AF' }}>
+                                    {new Date(record.date).toLocaleDateString()}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-bold" style={{ color: '#1A2332' }}>{record.type}</p>
-                                <p className="text-xs" style={{ color: '#9CA3AF' }}>{record.date}</p>
-                              </div>
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                record.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                record.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {record.status}
+                              </span>
                             </div>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                              record.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              record.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                              'bg-orange-100 text-orange-700'
-                            }`}>
-                              {record.status}
-                            </span>
-                          </div>
-                          <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>{record.description}</p>
-                          <div className="flex items-center justify-between">
+                            <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>{record.description}</p>
                             <span className="text-sm font-bold" style={{ color: '#10B981' }}>₹{record.cost.toLocaleString()}</span>
-                            {record.nextDue && (
-                              <span className="text-xs" style={{ color: '#9CA3AF' }}>Next due: {record.nextDue}</span>
-                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8" style={{ color: '#9CA3AF' }}>
+                        <Wrench className="w-12 h-12 mx-auto mb-2" />
+                        <p>No maintenance records yet</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Documents Tab */}
                 {activeTab === 'documents' && (
                   <div className="space-y-4">
                     {documents.map((doc, idx) => {
@@ -345,7 +420,7 @@ export default function VehicleSlugPage() {
                               <FileText className="w-6 h-6" style={{ color: '#2563EB' }} />
                               <div>
                                 <p className="font-bold" style={{ color: '#1A2332' }}>{doc.name}</p>
-                                <p className="text-xs" style={{ color: '#9CA3AF' }}>{doc.number}</p>
+                                <p className="text-xs" style={{ color: '#9CA3AF' }}>{doc.number || 'N/A'}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -354,7 +429,9 @@ export default function VehicleSlugPage() {
                             </div>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span style={{ color: '#5A6C7D' }}>Expiry Date: {doc.expiry}</span>
+                            <span style={{ color: '#5A6C7D' }}>
+                              Expiry: {new Date(doc.expiry).toLocaleDateString()}
+                            </span>
                             {daysLeft <= 30 && daysLeft > 0 && (
                               <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
                                 <Bell className="w-3 h-3" />
@@ -383,22 +460,18 @@ export default function VehicleSlugPage() {
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
               <h3 className="text-lg font-bold mb-4" style={{ color: '#1A2332' }}>Assigned Driver</h3>
 
-              {vehicle.assignedDriver ? (
+              {vehicle.assignedDriverName ? (
                 <div>
                   <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                        {vehicle.assignedDriver.name.split(' ').map(n => n[0]).join('')}
+                        {vehicle.assignedDriverName.split(' ').map(n => n[0]).join('')}
                       </div>
                       <div>
-                        <p className="font-bold" style={{ color: '#1A2332' }}>{vehicle.assignedDriver.name}</p>
+                        <p className="font-bold" style={{ color: '#1A2332' }}>{vehicle.assignedDriverName}</p>
                         <p className="text-xs" style={{ color: '#5A6C7D' }}>Currently Assigned</p>
                       </div>
                     </div>
-                    <button className="w-full text-sm font-medium px-3 py-2 rounded-lg transition-all hover:bg-blue-100"
-                      style={{ color: '#2563EB', border: '1px solid #2563EB' }}>
-                      View Driver Profile
-                    </button>
                   </div>
 
                   <div className="space-y-2">
@@ -445,7 +518,7 @@ export default function VehicleSlugPage() {
                 {[
                   { label: 'Total Earnings', value: `₹${vehicle.totalEarnings.toLocaleString()}`, icon: DollarSign, color: '#10B981' },
                   { label: 'This Month', value: `₹${vehicle.monthlyEarnings.toLocaleString()}`, icon: Calendar, color: '#2563EB' },
-                  { label: 'Average/Trip', value: `₹${Math.round(vehicle.totalEarnings / vehicle.totalTrips)}`, icon: TrendingUp, color: '#F59E0B' }
+                  { label: 'Average/Trip', value: vehicle.totalTrips > 0 ? `₹${Math.round(vehicle.totalEarnings / vehicle.totalTrips)}` : '₹0', icon: TrendingUp, color: '#F59E0B' }
                 ].map((stat, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -517,48 +590,46 @@ export default function VehicleSlugPage() {
                   <option value="Other">Other</option>
                 </select>
               </div>
-
-              <div>
+<div>
                 <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Description</label>
                 <textarea
                   value={maintenanceForm.description}
                   onChange={(e) => setMaintenanceForm({ ...maintenanceForm, description: e.target.value })}
-                  placeholder="Describe the maintenance work..."
+                  className="w-full px-3 py-2 rounded-lg resize-none"
+                  style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
                   rows={3}
-                  className="w-full px-3 py-2 rounded-lg"
-                  style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none', resize: 'vertical' }}
+                  placeholder="Enter maintenance details..."
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Date</label>
-                  <input
-                    type="date"
-                    value={maintenanceForm.date}
-                    onChange={(e) => setMaintenanceForm({ ...maintenanceForm, date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg"
-                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Cost (₹)</label>
-                  <input
-                    type="number"
-                    value={maintenanceForm.cost}
-                    onChange={(e) => setMaintenanceForm({ ...maintenanceForm, cost: e.target.value })}
-                    placeholder="5000"
-                    className="w-full px-3 py-2 rounded-lg"
-                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Cost (₹)</label>
+                <input
+                  type="number"
+                  value={maintenanceForm.cost}
+                  onChange={(e) => setMaintenanceForm({ ...maintenanceForm, cost: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Date</label>
+                <input
+                  type="date"
+                  value={maintenanceForm.date}
+                  onChange={(e) => setMaintenanceForm({ ...maintenanceForm, date: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Status</label>
                 <select
                   value={maintenanceForm.status}
-                  onChange={(e) => setMaintenanceForm({ ...maintenanceForm, status: e.target.value as any })}
+                  onChange={(e) => setMaintenanceForm({ ...maintenanceForm, status: e.target.value as 'completed' | 'pending' | 'scheduled' })}
                   className="w-full px-3 py-2 rounded-lg"
                   style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
                 >
@@ -572,14 +643,14 @@ export default function VehicleSlugPage() {
             <div className="flex gap-3 px-6 py-4 border-t" style={{ borderColor: '#E5E7EB' }}>
               <button
                 onClick={() => setShowMaintenanceModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+                className="flex-1 px-4 py-2 rounded-lg font-medium"
                 style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddMaintenance}
-                className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium"
+                className="flex-1 px-4 py-2 rounded-lg font-medium text-white"
                 style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
               >
                 Add Record
@@ -589,68 +660,62 @@ export default function VehicleSlugPage() {
         </div>
       )}
 
-      {/* Assign Driver Modal */}
+      {/* Driver Assignment Modal */}
       {showDriverModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: '#E5E7EB' }}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: '#E5E7EB' }}>
               <h2 className="text-lg font-bold" style={{ color: '#1A2332' }}>Assign Driver</h2>
               <button onClick={() => setShowDriverModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5" style={{ color: '#5A6C7D' }} />
               </button>
             </div>
 
-            <div className="px-6 py-4 space-y-3 overflow-y-auto flex-1">
-              {availableDrivers.map(driver => (
-                <div 
-                  key={driver.id}
-                  className={`p-4 rounded-lg cursor-pointer transition-all ${
-                    driver.status === 'offline' ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md'
-                  }`}
-                  style={{ 
-                    border: '1px solid #E5E7EB', 
-                    backgroundColor: vehicle.assignedDriver?.id === driver.id ? '#F0F9FF' : 'white' 
-                  }}
-                  onClick={() => {
-                    if (driver.status !== 'offline') {
-                      handleAssignDriver(driver);
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold" 
-                        style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                        {driver.name.split(' ').map(n => n[0]).join('')}
+            <div className="px-6 py-4 overflow-y-auto flex-1">
+              {availableDrivers.length > 0 ? (
+                <div className="space-y-3">
+                  {availableDrivers.map((driver) => (
+                    <button
+                      key={driver._id}
+                      onClick={() => handleAssignDriver(driver)}
+                      className="w-full p-4 rounded-lg hover:bg-blue-50 transition-all text-left"
+                      style={{ border: '1px solid #E5E7EB' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+                          {driver.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-bold" style={{ color: '#1A2332' }}>{driver.name}</p>
+                          <p className="text-xs" style={{ color: '#5A6C7D' }}>{driver.phone}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-1 mb-1">
+                            <Star className="w-4 h-4 fill-yellow-400" style={{ color: '#FBBF24' }} />
+                            <span className="text-sm font-medium" style={{ color: '#1A2332' }}>{driver.rating.toFixed(1)}</span>
+                          </div>
+                          <p className="text-xs" style={{ color: '#9CA3AF' }}>{driver.trips} trips</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold" style={{ color: '#1A2332' }}>{driver.name}</p>
-                        <p className="text-xs" style={{ color: '#5A6C7D' }}>{driver.phone}</p>
-                      </div>
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      driver.status === 'available' ? 'bg-green-100 text-green-700' :
-                      driver.status === 'on-trip' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {driver.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs" style={{ color: '#5A6C7D' }}>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3" style={{ color: '#F59E0B', fill: '#F59E0B' }} />
-                      <span>{driver.rating}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Car className="w-3 h-3" />
-                      <span>{driver.trips} trips</span>
-                    </div>
-                  </div>
-                  {vehicle.assignedDriver?.id === driver.id && (
-                    <p className="text-xs mt-2" style={{ color: '#2563EB' }}>Currently assigned</p>
-                  )}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="text-center py-8">
+                  <User className="w-12 h-12 mx-auto mb-3" style={{ color: '#9CA3AF' }} />
+                  <p className="text-sm" style={{ color: '#5A6C7D' }}>No drivers available</p>
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t" style={{ borderColor: '#E5E7EB' }}>
+              <button
+                onClick={() => setShowDriverModal(false)}
+                className="w-full px-4 py-2 rounded-lg font-medium"
+                style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

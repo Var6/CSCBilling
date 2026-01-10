@@ -1,45 +1,66 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Car, Users, Menu, Bell, Settings, Plus, Edit, Trash2, Phone, Mail, MapPin, Calendar, X, User, CheckCircle, XCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 interface Driver {
-  id: number;
+  _id: string;
   name: string;
   phone: string;
   email: string;
   status: 'available' | 'on-trip' | 'offline';
-  vehicle: string;
+  vehicle: string | null;
   license: string;
   joinDate: string;
   rating: number;
   trips: number;
+  address?: string;
+  bloodGroup?: string;
+  emergencyContact?: string;
 }
 
 export default function DriversPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-
-  const [drivers, setDrivers] = useState<Driver[]>([
-    { id: 1, name: 'Mike Johnson', phone: '+1 234-567-8901', email: 'mike.j@tripease.com', status: 'available', vehicle: 'Toyota Camry - ABC123', license: 'DL-12345678', joinDate: '2023-05-15', rating: 4.8, trips: 342 },
-    { id: 2, name: 'David Brown', phone: '+1 234-567-8902', email: 'david.b@tripease.com', status: 'on-trip', vehicle: 'Honda Accord - XYZ789', license: 'DL-23456789', joinDate: '2023-06-20', rating: 4.9, trips: 298 },
-    { id: 3, name: 'Chris Wilson', phone: '+1 234-567-8903', email: 'chris.w@tripease.com', status: 'available', vehicle: 'Ford Fusion - DEF456', license: 'DL-34567890', joinDate: '2023-07-10', rating: 4.7, trips: 275 },
-    { id: 4, name: 'James Taylor', phone: '+1 234-567-8904', email: 'james.t@tripease.com', status: 'offline', vehicle: 'Hyundai Elantra - GHI321', license: 'DL-45678901', joinDate: '2023-08-05', rating: 4.6, trips: 189 },
-    { id: 5, name: 'Tom Anderson', phone: '+1 234-567-8905', email: 'tom.a@tripease.com', status: 'on-trip', vehicle: 'Nissan Altima - JKL654', license: 'DL-56789012', joinDate: '2023-09-12', rating: 4.8, trips: 156 },
-    { id: 6, name: 'Robert Martinez', phone: '+1 234-567-8906', email: 'robert.m@tripease.com', status: 'available', vehicle: 'Chevrolet Malibu - MNO987', license: 'DL-67890123', joinDate: '2023-10-18', rating: 4.5, trips: 124 }
-  ]);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     email: '',
     license: '',
-    vehicle: ''
+    vehicle: '',
+    address: '',
+    bloodGroup: '',
+    emergencyContact: '',
+    status: 'offline' as 'available' | 'on-trip' | 'offline',
+    joinDate: new Date().toISOString().split('T')[0],
+    rating: 0,
+    trips: 0
   });
 
-  const getStatusStyle = (status:any) => {
+  useEffect(() => {
+    fetchDrivers();
+  }, []);
+
+  const fetchDrivers = async () => {
+    try {
+      const res = await fetch('/api/driver');
+      if (!res.ok) throw new Error('Failed to fetch drivers');
+      const data = await res.json();
+      setDrivers(data);
+    } catch (error) {
+      console.error('Error fetching drivers:', error);
+      alert('Failed to load drivers');
+    }
+  };
+
+  const getStatusStyle = (status: string) => {
     switch(status) {
       case 'available': return { bg: 'bg-green-100', text: 'text-green-700', dot: '#10B981' };
       case 'on-trip': return { bg: 'bg-blue-100', text: 'text-blue-700', dot: '#2563EB' };
@@ -50,43 +71,142 @@ export default function DriversPage() {
 
   const handleAddDriver = () => {
     setEditingDriver(null);
-    setFormData({ name: '', phone: '', email: '', license: '', vehicle: '' });
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      license: '',
+      vehicle: '',
+      address: '',
+      bloodGroup: '',
+      emergencyContact: '',
+      status: 'offline',
+      joinDate: new Date().toISOString().split('T')[0],
+      rating: 0,
+      trips: 0
+    });
     setShowModal(true);
   };
 
-  const handleEditDriver = (driver:any) => {
+  const handleEditDriver = (driver: Driver) => {
     setEditingDriver(driver);
     setFormData({
       name: driver.name,
       phone: driver.phone,
       email: driver.email,
       license: driver.license,
-      vehicle: driver.vehicle
+      vehicle: driver.vehicle || '',
+      address: driver.address || '',
+      bloodGroup: driver.bloodGroup || '',
+      emergencyContact: driver.emergencyContact || '',
+      status: driver.status,
+      joinDate: driver.joinDate ? new Date(driver.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      rating: driver.rating || 0,
+      trips: driver.trips || 0
     });
     setShowModal(true);
   };
 
-  const handleSubmit = () => {
-    if (editingDriver) {
-      setDrivers(drivers.map(d => d.id === editingDriver.id ? { ...d, ...formData } : d));
-    } else {
-      const newDriver: Driver = {
-        id: drivers.length + 1,
-        ...formData,
+  const handleSubmit = async () => {
+    try {
+      // Validate required fields
+      if (!formData.name.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.license.trim()) {
+        alert('Please fill in all required fields (Name, Phone, Email, License)');
+        return;
+      }
+
+      const payload = {
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        license: formData.license.trim(),
+        vehicle: formData.vehicle.trim() || null,
+        address: formData.address.trim(),
+        bloodGroup: formData.bloodGroup.trim(),
+        emergencyContact: formData.emergencyContact.trim(),
+        status: formData.status,
+        joinDate: formData.joinDate ? new Date(formData.joinDate) : new Date(),
+        rating: Number(formData.rating) || 0,
+        trips: Number(formData.trips) || 0,
+      };
+
+      const method = editingDriver ? 'PATCH' : 'POST';
+      const endpoint = editingDriver ? `/api/driver/${editingDriver._id}` : '/api/driver';
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Server Error: ${errText}`);
+      }
+
+      const data = await res.json();
+      console.log('Driver saved successfully:', data);
+
+      setShowModal(false);
+      setFormData({
+        name: '',
+        phone: '',
+        email: '',
+        license: '',
+        vehicle: '',
+        address: '',
+        bloodGroup: '',
+        emergencyContact: '',
         status: 'offline',
         joinDate: new Date().toISOString().split('T')[0],
         rating: 0,
-        trips: 0
-      };
-      setDrivers([...drivers, newDriver]);
+        trips: 0,
+      });
+      
+      fetchDrivers();
+    } catch (err: any) {
+      console.error('Error saving driver:', err.message);
+      alert(`Error: ${err.message}`);
     }
-    setShowModal(false);
+  };
+
+  const handleDeleteClick = (driver: Driver) => {
+    setDriverToDelete(driver);
+    setDeleteConfirmName('');
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!driverToDelete) return;
+
+    if (deleteConfirmName !== driverToDelete.name) {
+      alert('Name does not match. Please enter the exact driver name to confirm deletion.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/driver/${driverToDelete._id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete driver');
+
+      setShowDeleteModal(false);
+      setDriverToDelete(null);
+      setDeleteConfirmName('');
+      fetchDrivers();
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      alert('Failed to delete driver');
+    }
   };
 
   const filteredDrivers = drivers.filter(driver => {
     const matchesSearch = driver.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          driver.phone.includes(searchTerm) ||
-                         driver.vehicle.toLowerCase().includes(searchTerm.toLowerCase());
+                         (driver.vehicle && driver.vehicle.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === 'all' || driver.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -100,6 +220,7 @@ export default function DriversPage() {
 
   return (
     <div className="min-h-screen mb-9" style={{ backgroundColor: '#F8F9FA' }}>
+      <div className="p-6">
         <div className="mb-10 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Drivers Management</h1>
@@ -160,7 +281,7 @@ export default function DriversPage() {
           {filteredDrivers.map(driver => {
             const statusStyle = getStatusStyle(driver.status);
             return (
-              <div key={driver.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all" style={{ border: '1px solid #E5E7EB' }}>
+              <div key={driver._id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all" style={{ border: '1px solid #E5E7EB' }}>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -190,7 +311,7 @@ export default function DriversPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm" style={{ color: '#5A6C7D' }}>
                       <Car className="w-4 h-4" />
-                      <span className="font-medium">{driver.vehicle}</span>
+                      <span className="font-medium">{driver.vehicle || 'No vehicle assigned'}</span>
                     </div>
                   </div>
 
@@ -212,15 +333,17 @@ export default function DriversPage() {
                   </div>
 
                   <div className="flex gap-2">
+                    <Link href={`/Dashboard/Driver/${driver._id}`} className="flex-1">
+                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-blue-50" style={{ border: '1px solid #2563EB', color: '#2563EB' }}>
+                        <Edit className="w-4 h-4" />
+                        Edit
+                      </button>
+                    </Link>
                     <button 
-                      onClick={() => handleEditDriver(driver)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-blue-50"
-                      style={{ border: '1px solid #2563EB', color: '#2563EB' }}
+                      onClick={() => handleDeleteClick(driver)}
+                      className="p-2 rounded-lg transition-all hover:bg-red-50" 
+                      style={{ border: '1px solid #EF4444', color: '#EF4444' }}
                     >
-                      <Edit className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button className="p-2 rounded-lg transition-all hover:bg-red-50" style={{ border: '1px solid #EF4444', color: '#EF4444' }}>
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -230,84 +353,141 @@ export default function DriversPage() {
           })}
         </div>
 
-      {showModal && (
-       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-  <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
-    
-    {/* Header */}
-    <div
-      className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-      style={{ borderColor: '#E5E7EB' }}
-    >
-      <h2 className="text-lg font-bold" style={{ color: '#1A2332' }}>
-        {editingDriver ? 'Edit Driver' : 'Add New Driver'}
-      </h2>
-      <button
-        onClick={() => setShowModal(false)}
-        className="p-1 hover:bg-gray-100 rounded-lg"
-      >
-        <X className="w-5 h-5" style={{ color: '#5A6C7D' }} />
-      </button>
-    </div>
+        {/* Add/Edit Driver Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: '#E5E7EB' }}>
+                <h2 className="text-lg font-bold" style={{ color: '#1A2332' }}>
+                  {editingDriver ? 'Edit Driver' : 'Add New Driver'}
+                </h2>
+                <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" style={{ color: '#5A6C7D' }} />
+                </button>
+              </div>
 
-    {/* Scrollable Content */}
-    <div className="px-6 py-4 space-y-3 overflow-y-auto flex-1">
-      {[
-        { label: 'Full Name', value: formData.name, key: 'name', type: 'text', placeholder: 'John Doe' },
-        { label: 'Phone Number', value: formData.phone, key: 'phone', type: 'tel', placeholder: '+91 98765 43210' },
-        { label: 'Email', value: formData.email, key: 'email', type: 'email', placeholder: 'driver@tripease.com' },
-        { label: 'License Number', value: formData.license, key: 'license', type: 'text', placeholder: 'DL-12345678' },
-        { label: 'Assigned Vehicle', value: formData.vehicle, key: 'vehicle', type: 'text', placeholder: 'Toyota Camry - ABC123' },
-      ].map((field) => (
-        <div key={field.key}>
-          <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
-            {field.label}
-          </label>
-          <input
-            type={field.type}
-            value={field.value}
-            onChange={(e) =>
-              setFormData({ ...formData, [field.key]: e.target.value })
-            }
-            placeholder={field.placeholder}
-            className="w-full px-3 py-2.5 rounded-lg"
-            style={{
-              border: '1px solid #E5E7EB',
-              color: '#1A2332',
-              outline: 'none',
-            }}
-          />
-        </div>
-      ))}
-    </div>
+              <div className="px-6 py-4 space-y-3 overflow-y-auto flex-1">
+                {[
+                  { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'John Doe' },
+                  { label: 'Phone Number *', key: 'phone', type: 'tel', placeholder: '+91 98765 43210' },
+                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'driver@tripease.com' },
+                  { label: 'License Number *', key: 'license', type: 'text', placeholder: 'DL-12345678' },
+                  { label: 'Assigned Vehicle', key: 'vehicle', type: 'text', placeholder: 'Toyota Camry - ABC123' },
+                  { label: 'Address', key: 'address', type: 'text', placeholder: '123 Street, City' },
+                  { label: 'Blood Group', key: 'bloodGroup', type: 'text', placeholder: 'A+' },
+                  { label: 'Emergency Contact', key: 'emergencyContact', type: 'tel', placeholder: '+91 98765 43211' },
+                  { label: 'Status', key: 'status', type: 'select', options: ['available', 'on-trip', 'offline'] },
+                  { label: 'Join Date', key: 'joinDate', type: 'date' },
+                  { label: 'Rating', key: 'rating', type: 'number', placeholder: '0' },
+                  { label: 'Trips', key: 'trips', type: 'number', placeholder: '0' },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
+                      {field.label}
+                    </label>
+                    {field.type === 'select' ? (
+                      <select
+                        value={formData[field.key as keyof typeof formData]}
+                        onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                        className="w-full px-3 py-2.5 rounded-lg"
+                        style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                      >
+                        {field.options!.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={formData[field.key as keyof typeof formData] || ''}
+                        onChange={(e) => setFormData({ ...formData, [field.key]: field.type === 'number' ? Number(e.target.value) : e.target.value })}
+                        placeholder={field.placeholder || ''}
+                        className="w-full px-3 py-2.5 rounded-lg"
+                        style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
 
-    {/* Footer */}
-    <div
-      className="flex gap-3 px-6 py-4 border-t shrink-0"
-      style={{ borderColor: '#E5E7EB' }}
-    >
-      <button
-        onClick={() => setShowModal(false)}
-        className="flex-1 px-4 py-2.5 rounded-lg font-medium"
-        style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
-      >
-        Cancel
-      </button>
-      <button
-        onClick={handleSubmit}
-        className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium"
-        style={{
-          background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
-        }}
-      >
-        {editingDriver ? 'Save Changes' : 'Add Driver'}
-      </button>
-    </div>
+              <div className="flex gap-3 px-6 py-4 border-t shrink-0" style={{ borderColor: '#E5E7EB' }}>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+                  style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium"
+                  style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+                >
+                  {editingDriver ? 'Save Changes' : 'Add Driver'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-  </div>
-</div>
-
-      )}
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && driverToDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+              
+              <h2 className="text-xl font-bold text-center mb-2" style={{ color: '#1A2332' }}>
+                Delete Driver
+              </h2>
+              
+              <p className="text-center mb-4" style={{ color: '#5A6C7D' }}>
+                Are you sure you want to delete <strong>{driverToDelete.name}</strong>?
+              </p>
+              
+              <p className="text-sm text-center mb-4" style={{ color: '#EF4444' }}>
+                This action cannot be undone. Please type the driver's name to confirm.
+              </p>
+              
+              <input
+                type="text"
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={`Type "${driverToDelete.name}" to confirm`}
+                className="w-full px-4 py-3 rounded-lg mb-6"
+                style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+              />
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDriverToDelete(null);
+                    setDeleteConfirmName('');
+                  }}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+                  style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteConfirmName !== driverToDelete.name}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: '#EF4444' }}
+                >
+                  Delete Driver
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

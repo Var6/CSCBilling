@@ -1,41 +1,81 @@
-// src/app/fleet/page.tsx
 'use client';
-import React, { useState } from 'react';
-import { Car, Menu, Bell, Settings, Plus, Edit, Trash2, Calendar, X, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Car, Plus, Edit, Trash2, Calendar, X, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
-interface Car {
-  id: number;
-  carNumber: string;
+interface Vehicle {
+  _id: string;
+  name: string;
+  plate: string;
   model: string;
+  year: number;
+  status: 'available' | 'in-use' | 'maintenance';
+  color: string;
+  fuelType: string;
+  mileage: string;
+  insurance: string;
   insuranceExpiry: string;
+  pollution: string;
+  pollutionExpiry: string;
+  fitness: string;
+  fitnessExpiry: string;
   rcNumber: string;
-  status: 'valid' | 'expiring' | 'expired';
+  assignedDriverName: string | null;
+  totalEarnings: number;
+  monthlyEarnings: number;
+  totalTrips: number;
 }
 
-export default function FleetPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+export default function VehiclesPage() {
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingCar, setEditingCar] = useState<Car | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-
-  //add pollution and chechis number also
-
-  const [cars, setCars] = useState<Car[]>([
-    { id: 1, carNumber: 'DL01AB1234', model: 'Toyota Innova', insuranceExpiry: '2025-12-15', rcNumber: 'RC123456789', status: 'valid' },
-    { id: 2, carNumber: 'DL02CD5678', model: 'Honda City', insuranceExpiry: '2025-01-25', rcNumber: 'RC234567890', status: 'expiring' },
-    { id: 3, carNumber: 'DL03EF9012', model: 'Maruti Swift', insuranceExpiry: '2024-11-10', rcNumber: 'RC345678901', status: 'expired' },
-    { id: 4, carNumber: 'DL04GH3456', model: 'Hyundai Creta', insuranceExpiry: '2025-08-20', rcNumber: 'RC456789012', status: 'valid' },
-    { id: 5, carNumber: 'DL05IJ7890', model: 'Mahindra XUV500', insuranceExpiry: '2025-02-05', rcNumber: 'RC567890123', status: 'expiring' },
-    { id: 6, carNumber: 'DL06KL2345', model: 'Ford EcoSport', insuranceExpiry: '2025-06-30', rcNumber: 'RC678901234', status: 'valid' }
-  ]);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const [formData, setFormData] = useState({
-    carNumber: '',
+    name: '',
+    plate: '',
     model: '',
+    year: new Date().getFullYear(),
+    status: 'available' as 'available' | 'in-use' | 'maintenance',
+    color: '',
+    fuelType: '',
+    mileage: '0 km',
+    insurance: '',
     insuranceExpiry: '',
-    rcNumber: ''
+    pollution: '',
+    pollutionExpiry: '',
+    fitness: '',
+    fitnessExpiry: '',
+    rcNumber: '',
+    totalEarnings: 0,
+    monthlyEarnings: 0,
+    totalTrips: 0
   });
+
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    try {
+      const res = await fetch('/api/vehicle', {
+        cache: 'no-store'
+      });
+      
+      if (!res.ok) throw new Error('Failed to fetch vehicles');
+      
+      const data = await res.json();
+      setVehicles(data);
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      alert('Failed to load vehicles');
+    }
+  };
 
   const getInsuranceStatus = (expiryDate: string): 'valid' | 'expiring' | 'expired' => {
     const today = new Date();
@@ -49,149 +89,284 @@ export default function FleetPage() {
 
   const getStatusStyle = (status: string) => {
     switch(status) {
-      case 'valid': return { bg: 'bg-green-100', text: 'text-green-700', dot: '#10B981', icon: CheckCircle };
-      case 'expiring': return { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: '#F59E0B', icon: Clock };
-      case 'expired': return { bg: 'bg-red-100', text: 'text-red-700', dot: '#EF4444', icon: XCircle };
-      default: return { bg: 'bg-gray-100', text: 'text-gray-700', dot: '#9CA3AF', icon: AlertCircle };
+      case 'available': 
+        return { bg: 'bg-green-100', text: 'text-green-700', dot: '#10B981', icon: CheckCircle };
+      case 'in-use': 
+        return { bg: 'bg-blue-100', text: 'text-blue-700', dot: '#2563EB', icon: Clock };
+      case 'maintenance': 
+        return { bg: 'bg-orange-100', text: 'text-orange-700', dot: '#F59E0B', icon: AlertCircle };
+      case 'valid': 
+        return { bg: 'bg-green-100', text: 'text-green-700', dot: '#10B981', icon: CheckCircle };
+      case 'expiring': 
+        return { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: '#F59E0B', icon: Clock };
+      case 'expired': 
+        return { bg: 'bg-red-100', text: 'text-red-700', dot: '#EF4444', icon: XCircle };
+      default: 
+        return { bg: 'bg-gray-100', text: 'text-gray-700', dot: '#9CA3AF', icon: AlertCircle };
     }
   };
 
-  const handleAddCar = () => {
-    setEditingCar(null);
-    setFormData({ carNumber: '', model: '', insuranceExpiry: '', rcNumber: '' });
-    setShowModal(true);
-  };
-
-  const handleEditCar = (car: Car) => {
-    setEditingCar(car);
+  const handleAddVehicle = () => {
+    setEditingVehicle(null);
     setFormData({
-      carNumber: car.carNumber,
-      model: car.model,
-      insuranceExpiry: car.insuranceExpiry,
-      rcNumber: car.rcNumber
+      name: '',
+      plate: '',
+      model: '',
+      year: new Date().getFullYear(),
+      status: 'available',
+      color: '',
+      fuelType: '',
+      mileage: '0 km',
+      insurance: '',
+      insuranceExpiry: '',
+      pollution: '',
+      pollutionExpiry: '',
+      fitness: '',
+      fitnessExpiry: '',
+      rcNumber: '',
+      totalEarnings: 0,
+      monthlyEarnings: 0,
+      totalTrips: 0
     });
     setShowModal(true);
   };
 
-  const handleSubmit = () => {
-    const status = getInsuranceStatus(formData.insuranceExpiry);
-    
-    if (editingCar) {
-      setCars(cars.map(c => c.id === editingCar.id ? { ...c, ...formData, status } : c));
-    } else {
-      const newCar: Car = {
-        id: cars.length + 1,
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setEditingVehicle(vehicle);
+    setFormData({
+      name: vehicle.name,
+      plate: vehicle.plate,
+      model: vehicle.model,
+      year: vehicle.year,
+      status: vehicle.status,
+      color: vehicle.color || '',
+      fuelType: vehicle.fuelType || '',
+      mileage: vehicle.mileage || '0 km',
+      insurance: vehicle.insurance || '',
+      insuranceExpiry: vehicle.insuranceExpiry ? new Date(vehicle.insuranceExpiry).toISOString().split('T')[0] : '',
+      pollution: vehicle.pollution || '',
+      pollutionExpiry: vehicle.pollutionExpiry ? new Date(vehicle.pollutionExpiry).toISOString().split('T')[0] : '',
+      fitness: vehicle.fitness || '',
+      fitnessExpiry: vehicle.fitnessExpiry ? new Date(vehicle.fitnessExpiry).toISOString().split('T')[0] : '',
+      rcNumber: vehicle.rcNumber,
+      totalEarnings: vehicle.totalEarnings || 0,
+      monthlyEarnings: vehicle.monthlyEarnings || 0,
+      totalTrips: vehicle.totalTrips || 0
+    });
+    setShowModal(true);
+  };
+
+  const handleSubmit = async () => {
+    try {
+      if (!formData.name || !formData.plate || !formData.model || !formData.rcNumber ||
+          !formData.insuranceExpiry || !formData.pollutionExpiry || !formData.fitnessExpiry) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      const payload = {
         ...formData,
-        status
+        year: Number(formData.year),
+        totalEarnings: Number(formData.totalEarnings),
+        monthlyEarnings: Number(formData.monthlyEarnings),
+        totalTrips: Number(formData.totalTrips)
       };
-      setCars([...cars, newCar]);
+
+      const method = editingVehicle ? 'PATCH' : 'POST';
+      const endpoint = editingVehicle ? `/api/vehicle/${editingVehicle._id}` : '/api/vehicle';
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Server Error: ${errText}`);
+      }
+
+      setShowModal(false);
+      setFormData({
+        name: '',
+        plate: '',
+        model: '',
+        year: new Date().getFullYear(),
+        status: 'available',
+        color: '',
+        fuelType: '',
+        mileage: '0 km',
+        insurance: '',
+        insuranceExpiry: '',
+        pollution: '',
+        pollutionExpiry: '',
+        fitness: '',
+        fitnessExpiry: '',
+        rcNumber: '',
+        totalEarnings: 0,
+        monthlyEarnings: 0,
+        totalTrips: 0
+      });
+      
+      fetchVehicles();
+      alert('Vehicle saved successfully!');
+    } catch (err: any) {
+      console.error('Error saving vehicle:', err.message);
+      alert(`Error: ${err.message}`);
     }
-    setShowModal(false);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this car?')) {
-      setCars(cars.filter(c => c.id !== id));
+  const handleDeleteClick = (vehicle: Vehicle) => {
+    setVehicleToDelete(vehicle);
+    setDeleteConfirmName('');
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!vehicleToDelete) return;
+
+    if (deleteConfirmName !== vehicleToDelete.plate) {
+      alert('Plate number does not match. Please enter the exact plate number to confirm deletion.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/vehicle/${vehicleToDelete._id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete vehicle');
+
+      setShowDeleteModal(false);
+      setVehicleToDelete(null);
+      setDeleteConfirmName('');
+      fetchVehicles();
+      alert('Vehicle deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting vehicle:', error);
+      alert('Failed to delete vehicle');
     }
   };
 
-  const filteredCars = cars.filter(car => {
-    const matchesSearch = car.carNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         car.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         car.rcNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || car.status === filterStatus;
+  const filteredVehicles = vehicles.filter(vehicle => {
+    const matchesSearch = vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vehicle.rcNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || vehicle.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   const statusCounts = {
-    all: cars.length,
-    valid: cars.filter(c => c.status === 'valid').length,
-    expiring: cars.filter(c => c.status === 'expiring').length,
-    expired: cars.filter(c => c.status === 'expired').length
+    all: vehicles.length,
+    available: vehicles.filter(v => v.status === 'available').length,
+    'in-use': vehicles.filter(v => v.status === 'in-use').length,
+    maintenance: vehicles.filter(v => v.status === 'maintenance').length,
+    expiring: vehicles.filter(v => {
+      const insuranceStatus = getInsuranceStatus(v.insuranceExpiry);
+      const pollutionStatus = getInsuranceStatus(v.pollutionExpiry);
+      const fitnessStatus = getInsuranceStatus(v.fitnessExpiry);
+      return insuranceStatus === 'expiring' || pollutionStatus === 'expiring' || fitnessStatus === 'expiring';
+    }).length
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Fleet Management</h1>
-            <p style={{ color: '#5A6C7D' }}>Manage your vehicle fleet</p>
-          </div>
-          <button 
-            onClick={handleAddCar}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
-            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
-          >
-            <Plus className="w-5 h-5" />
-            Add Car
-          </button>
+    <div className="min-h-screen p-6" style={{ backgroundColor: '#F8F9FA' }}>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Fleet Management</h1>
+          <p style={{ color: '#5A6C7D' }}>Manage your vehicle fleet</p>
         </div>
+        <button 
+          onClick={handleAddVehicle}
+          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+          style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+        >
+          <Plus className="w-5 h-5" />
+          Add Vehicle
+        </button>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: 'Total Cars', value: statusCounts.all, icon: Car, color: '#2563EB' },
-            { label: 'Valid Insurance', value: statusCounts.valid, icon: CheckCircle, color: '#10B981' },
-            { label: 'Expiring Soon', value: statusCounts.expiring, icon: Clock, color: '#F59E0B' },
-            { label: 'Expired', value: statusCounts.expired, icon: XCircle, color: '#EF4444' }
-          ].map((stat, idx) => (
-            <div key={idx} className="bg-white rounded-xl p-6 shadow-sm" style={{ border: '1px solid #E5E7EB' }}>
-              <div className="flex items-center justify-between mb-3">
-                <stat.icon className="w-8 h-8" style={{ color: stat.color }} />
-                <span className="text-3xl font-bold" style={{ color: '#1A2332' }}>{stat.value}</span>
-              </div>
-              <p className="text-sm font-medium" style={{ color: '#5A6C7D' }}>{stat.label}</p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Total Vehicles', value: statusCounts.all, icon: Car, color: '#2563EB' },
+          { label: 'Available', value: statusCounts.available, icon: CheckCircle, color: '#10B981' },
+          { label: 'In Use', value: statusCounts['in-use'], icon: Clock, color: '#F59E0B' },
+          { label: 'Maintenance', value: statusCounts.maintenance, icon: AlertCircle, color: '#EF4444' }
+        ].map((stat, idx) => (
+          <div key={stat.label} className="bg-white rounded-xl p-6 shadow-sm" style={{ border: '1px solid #E5E7EB' }}>
+            <div className="flex items-center justify-between mb-3">
+              <stat.icon className="w-8 h-8" style={{ color: stat.color }} />
+              <span className="text-3xl font-bold" style={{ color: '#1A2332' }}>{stat.value}</span>
             </div>
-          ))}
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm mb-6 p-6" style={{ border: '1px solid #E5E7EB' }}>
-          <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Search cars by number, model, or RC..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-lg"
-              style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 rounded-lg"
-              style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
-            >
-              <option value="all">All Status</option>
-              <option value="valid">Valid</option>
-              <option value="expiring">Expiring</option>
-              <option value="expired">Expired</option>
-            </select>
+            <p className="text-sm font-medium" style={{ color: '#5A6C7D' }}>{stat.label}</p>
           </div>
-        </div>
+        ))}
+      </div>
 
+      <div className="bg-white rounded-xl shadow-sm mb-6 p-6" style={{ border: '1px solid #E5E7EB' }}>
+        <div className="flex gap-4">
+          <input
+            type="text"
+            placeholder="Search vehicles by name, plate, model, or RC..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 px-4 py-3 rounded-lg"
+            style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+          />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-3 rounded-lg"
+            style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+          >
+            <option value="all">All Status</option>
+            <option value="available">Available</option>
+            <option value="in-use">In Use</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+      </div>
+
+      {filteredVehicles.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <Car className="w-16 h-16 mx-auto mb-4" style={{ color: '#9CA3AF' }} />
+          <h3 className="text-xl font-bold mb-2" style={{ color: '#1A2332' }}>No Vehicles Found</h3>
+          <p className="mb-6" style={{ color: '#5A6C7D' }}>
+            {vehicles.length === 0 ? 'Get started by adding your first vehicle' : 'No vehicles match your search'}
+          </p>
+          {vehicles.length === 0 && (
+            <button
+              onClick={handleAddVehicle}
+              className="px-6 py-3 rounded-lg text-white font-medium"
+              style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+            >
+              Add First Vehicle
+            </button>
+          )}
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCars.map(car => {
-            const statusStyle = getStatusStyle(car.status);
+          {filteredVehicles.map(vehicle => {
+            const statusStyle = getStatusStyle(vehicle.status);
             const StatusIcon = statusStyle.icon;
-            const expiryDate = new Date(car.insuranceExpiry).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            });
+            const insuranceStatus = getInsuranceStatus(vehicle.insuranceExpiry);
+            const insuranceStatusStyle = getStatusStyle(insuranceStatus);
             
             return (
-              <div key={car.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all" style={{ border: '1px solid #E5E7EB' }}>
+              <div key={vehicle._id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all" style={{ border: '1px solid #E5E7EB' }}>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
                         <Car className="w-8 h-8" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold" style={{ color: '#1A2332' }}>{car.carNumber}</h3>
+                        <h3 className="text-lg font-bold" style={{ color: '#1A2332' }}>{vehicle.plate}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} flex items-center gap-1`}>
                             <StatusIcon className="w-3 h-3" />
-                            {car.status.toUpperCase()}
+                          {(vehicle.status ?? 'unknown').toUpperCase()}
                           </span>
                         </div>
                       </div>
@@ -202,42 +377,48 @@ export default function FleetPage() {
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm" style={{ color: '#5A6C7D' }}>
                       <Car className="w-4 h-4" />
-                      <span className="font-medium">{car.model}</span>
+                      <span className="font-medium">{vehicle.name} - {vehicle.model}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#5A6C7D' }}>
-                      <Calendar className="w-4 h-4" />
-                      <span>Insurance: {expiryDate}</span>
+                    <div className="flex items-center justify-between text-sm" style={{ color: '#5A6C7D' }}>
+                      <span>Insurance</span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${insuranceStatusStyle.bg} ${insuranceStatusStyle.text}`}>
+                        {insuranceStatus}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm" style={{ color: '#5A6C7D' }}>
-                      <CheckCircle className="w-4 h-4" />
-                      <span>RC: {car.rcNumber}</span>
-                    </div>
+                    {vehicle.assignedDriverName && (
+                      <div className="flex items-center gap-2 text-sm" style={{ color: '#5A6C7D' }}>
+                        <span>Driver: <strong>{vehicle.assignedDriverName}</strong></span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 mb-4" style={{ borderTop: '1px solid #E5E7EB' }}>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#9CA3AF' }}>Car Number</p>
-                        <p className="text-sm font-bold" style={{ color: '#1A2332' }}>{car.carNumber}</p>
+                        <p className="text-xs mb-1" style={{ color: '#9CA3AF' }}>Trips</p>
+                        <p className="text-sm font-bold" style={{ color: '#1A2332' }}>{vehicle.totalTrips}</p>
                       </div>
                       <div>
-                        <p className="text-xs mb-1" style={{ color: '#9CA3AF' }}>Model</p>
-                        <p className="text-sm font-bold" style={{ color: '#1A2332' }}>{car.model}</p>
+                        <p className="text-xs mb-1" style={{ color: '#9CA3AF' }}>Year</p>
+                        <p className="text-sm font-bold" style={{ color: '#1A2332' }}>{vehicle.year}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs mb-1" style={{ color: '#9CA3AF' }}>Mileage</p>
+                        <p className="text-sm font-bold" style={{ color: '#1A2332' }}>{vehicle.mileage}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="flex gap-2">
+                    <Link href={`/Dashboard/Car/${vehicle._id}`} className="flex-1">
+                      <button className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-blue-50"
+                        style={{ border: '1px solid #2563EB', color: '#2563EB' }}>
+                        <Edit className="w-4 h-4" />
+                        View
+                      </button>
+                    </Link>
                     <button 
-                      onClick={() => handleEditCar(car)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-blue-50"
-                      style={{ border: '1px solid #2563EB', color: '#2563EB' }}
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(car.id)}
+                      onClick={() => handleDeleteClick(vehicle)}
                       className="p-2 rounded-lg transition-all hover:bg-red-50" 
                       style={{ border: '1px solid #EF4444', color: '#EF4444' }}
                     >
@@ -249,80 +430,281 @@ export default function FleetPage() {
             );
           })}
         </div>
+      )}
 
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
-            
-            <div
-              className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-              style={{ borderColor: '#E5E7EB' }}
-            >
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: '#E5E7EB' }}>
               <h2 className="text-lg font-bold" style={{ color: '#1A2332' }}>
-                {editingCar ? 'Edit Car' : 'Add New Car'}
+                {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
               </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1 hover:bg-gray-100 rounded-lg"
-              >
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
                 <X className="w-5 h-5" style={{ color: '#5A6C7D' }} />
               </button>
             </div>
 
-            <div className="px-6 py-4 space-y-3 overflow-y-auto flex-1">
-              {[
-                { label: 'Car Number', value: formData.carNumber, key: 'carNumber', type: 'text', placeholder: 'e.g., DL01AB1234' },
-                { label: 'Model', value: formData.model, key: 'model', type: 'text', placeholder: 'e.g., Toyota Innova' },
-                { label: 'Insurance Expiry', value: formData.insuranceExpiry, key: 'insuranceExpiry', type: 'date', placeholder: '' },
-                { label: 'RC Number', value: formData.rcNumber, key: 'rcNumber', type: 'text', placeholder: 'e.g., RC123456789' },
-              ].map((field) => (
-                <div key={field.key}>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
-                    {field.label}
-                  </label>
+            <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Vehicle Name *</label>
                   <input
-                    type={field.type}
-                    value={field.value}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [field.key]: e.target.value })
-                    }
-                    placeholder={field.placeholder}
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Toyota Camry"
                     className="w-full px-3 py-2.5 rounded-lg"
-                    style={{
-                      border: '1px solid #E5E7EB',
-                      color: '#1A2332',
-                      outline: 'none',
-                    }}
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
                   />
                 </div>
-              ))}
-            </div>
 
-            <div
-              className="flex gap-3 px-6 py-4 border-t shrink-0"
-              style={{ borderColor: '#E5E7EB' }}
-            >
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-lg font-medium"
-                style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium"
-                style={{
-                  background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
-                }}
-              >
-                {editingCar ? 'Save Changes' : 'Add Car'}
-              </button>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Plate Number *</label>
+                  <input
+                    type="text"
+                    value={formData.plate}
+                    onChange={(e) => setFormData({ ...formData, plate: e.target.value })}
+                    placeholder="DL01AB1234"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
 
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Model *</label>
+                  <input
+                    type="text"
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    placeholder="2022 Camry Hybrid"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Year *</label>
+                  <input
+                    type="number"
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Color</label>
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    placeholder="Silver"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Fuel Type</label>
+                  <select
+                    value={formData.fuelType}
+                    onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  >
+                    <option value="">Select</option>
+                    <option value="Petrol">Petrol</option>
+                    <option value="Diesel">Diesel</option>
+                    <option value="CNG">CNG</option>
+                    <option value="Electric">Electric</option>
+                    <option value="Hybrid">Hybrid</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Status</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'available' | 'in-use' | 'maintenance' })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  >
+                    <option value="available">Available</option>
+                    <option value="in-use">In Use</option>
+                    <option value="maintenance">Maintenance</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Mileage</label>
+                  <input
+                    type="text"
+                    value={formData.mileage}
+                    onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                    placeholder="45,230 km"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>RC Number *</label>
+                  <input
+                    type="text"
+                    value={formData.rcNumber}
+                    onChange={(e) => setFormData({ ...formData, rcNumber: e.target.value })}
+                    placeholder="RC123456789"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Insurance Number</label>
+                  <input
+                    type="text"
+                    value={formData.insurance}
+                    onChange={(e) => setFormData({ ...formData, insurance: e.target.value })}
+                    placeholder="INS-2024-001"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Insurance Expiry *</label>
+                  <input
+                    type="date"
+                    value={formData.insuranceExpiry}
+                    onChange={(e) => setFormData({ ...formData, insuranceExpiry: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Pollution Certificate</label>
+                  <input
+                    type="text"
+                    value={formData.pollution}
+                    onChange={(e) => setFormData({ ...formData, pollution: e.target.value })}
+                    placeholder="PUC-2024-ABC123"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Pollution Expiry *</label>
+                  <input
+                    type="date"
+                    value={formData.pollutionExpiry}
+                    onChange={(e) => setFormData({ ...formData, pollutionExpiry: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Fitness Certificate</label>
+                  <input
+                    type="text"
+                    value={formData.fitness}
+                    onChange={(e) => setFormData({ ...formData, fitness: e.target.value })}
+                    placeholder="FIT-2024-ABC123"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Fitness Expiry *</label>
+                  <input
+                    type="date"
+                    value={formData.fitnessExpiry}
+                    onChange={(e) => setFormData({ ...formData, fitnessExpiry: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}/>
+                </div>
+                </div>
+                </div>
+                <div className="flex gap-3 px-6 py-4 border-t shrink-0" style={{ borderColor: '#E5E7EB' }}>
+          <button
+            onClick={() => setShowModal(false)}
+            className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+            style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium"
+            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+          >
+            {editingVehicle ? 'Save Changes' : 'Add Vehicle'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
+  {/* Delete Confirmation Modal */}
+  {showDeleteModal && vehicleToDelete && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+        <div className="flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <Trash2 className="w-6 h-6 text-red-600" />
           </div>
         </div>
-      )}
+        
+        <h2 className="text-xl font-bold text-center mb-2" style={{ color: '#1A2332' }}>
+          Delete Vehicle
+        </h2>
+        
+        <p className="text-center mb-4" style={{ color: '#5A6C7D' }}>
+          Are you sure you want to delete <strong>{vehicleToDelete.name}</strong> ({vehicleToDelete.plate})?
+        </p>
+        
+        <p className="text-sm text-center mb-4" style={{ color: '#EF4444' }}>
+          This action cannot be undone. Please type the plate number to confirm.
+        </p>
+        
+        <input
+          type="text"
+          value={deleteConfirmName}
+          onChange={(e) => setDeleteConfirmName(e.target.value)}
+          placeholder={`Type "${vehicleToDelete.plate}" to confirm`}
+          className="w-full px-4 py-3 rounded-lg mb-6"
+          style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+        />
+        
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              setShowDeleteModal(false);
+              setVehicleToDelete(null);
+              setDeleteConfirmName('');
+            }}
+            className="flex-1 px-4 py-2.5 rounded-lg font-medium"
+            style={{ border: '1px solid #E5E7EB', color: '#5A6C7D' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirmDelete}
+            disabled={deleteConfirmName !== vehicleToDelete.plate}
+            className="flex-1 px-4 py-2.5 rounded-lg text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: '#EF4444' }}
+          >
+            Delete Vehicle
+          </button>
+        </div>
+      </div>
     </div>
-  );
+  )}
+</div>
+);
 }
