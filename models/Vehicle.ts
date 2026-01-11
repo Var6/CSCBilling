@@ -18,6 +18,7 @@ export interface IVehicle {
   fitness: string;
   fitnessExpiry: Date;
   rcNumber: string;
+  company:string;
   
   // Driver Assignment
   assignedDriverId: mongoose.Types.ObjectId | null;
@@ -43,6 +44,7 @@ const vehicleSchema = new Schema<IVehicle>({
   name: { type: String, required: true },
   plate: { type: String, required: true, unique: true },
   model: { type: String, required: true },
+  company: { type: String, default: '' },
   year: { type: Number, required: true },
   status: { 
     type: String, 

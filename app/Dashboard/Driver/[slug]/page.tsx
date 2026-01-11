@@ -1,8 +1,30 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Car, ArrowLeft, Edit, Plus, Phone, Mail, MapPin, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, X, User, Star, Bell, Lock, Unlock } from 'lucide-react';
+import {
+  Car,
+  ArrowLeft,
+  Edit,
+  Plus,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  X,
+  User,
+  Star,
+  Bell,
+  Lock,
+  Unlock
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+
+/* ================= TYPES ================= */
 
 interface Driver {
   _id: string;
@@ -29,11 +51,21 @@ interface Vehicle {
   status: 'available' | 'in-use' | 'maintenance';
 }
 
-export default function DriverDetailPage() {
-  const params = useParams<{ id?: string }>();
-  const driverId = params?.id;
+/* ================= PAGE ================= */
 
+export default function DriverDetailPage() {
+  const params = useParams();
   const router = useRouter();
+
+  /* ✅ CORRECT PARAM EXTRACTION (slug) */
+  const driverId =
+    typeof params?.slug === 'string'
+      ? params.slug
+      : Array.isArray(params?.slug)
+      ? params.slug[0]
+      : undefined;
+
+  /* ================= STATE ================= */
 
   const [driver, setDriver] = useState<Driver | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,45 +74,103 @@ export default function DriverDetailPage() {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [unlockCode, setUnlockCode] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'performance' | 'details'>('overview');
+  const [activeTab, setActiveTab] =
+    useState<'overview' | 'performance' | 'details'>('overview');
 
-useEffect(() => {
-  if (!driverId) {
-    setLoading(false);
-    return;
-  }
+  /* ================= DEBUG ================= */
 
-  Promise.all([fetchDriver(), fetchVehicles()])
-    .catch(console.error)
-    .finally(() => setLoading(false));
-}, [driverId]);
+  useEffect(() => {
+    console.log('================ DEBUG =================');
+    console.log('RAW PARAMS:', params);
+    console.log('RESOLVED DRIVER ID:', driverId);
+    console.log('TYPE:', typeof driverId);
+    console.log('========================================');
+  }, [params, driverId]);
 
-const fetchDriver = async () => {
-  const res = await fetch(`/api/driver/${driverId}`);
-  if (!res.ok) throw new Error('Failed to fetch driver');
-  const data = await res.json();
-  setDriver(data);
-};
+  /* ================= DATA FETCH ================= */
+
+  useEffect(() => {
+    if (!driverId) {
+      console.error('❌ DRIVER ID IS UNDEFINED');
+      setLoading(false);
+      return;
+    }
+
+    fetchDriver();
+    fetchVehicles();
+  }, [driverId]);
+
+  const fetchDriver = async () => {
+    try {
+      console.log('📡 Fetching driver:', driverId);
+
+      const res = await fetch(`/api/driver/${driverId}`);
+      const data = await res.json();
+
+      console.log('API STATUS:', res.status);
+      console.log('API DATA:', data);
+
+      if (!res.ok) throw new Error(data?.error || 'Driver not found');
+
+      setDriver(data);
+    } catch (error) {
+      console.error('❌ Error fetching driver:', error);
+      setDriver(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchVehicles = async () => {
     try {
       const res = await fetch('/api/vehicles');
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableVehicles(data.filter((v: Vehicle) => v.status === 'available'));
-      }
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setAvailableVehicles(
+        data.filter((v: Vehicle) => v.status === 'available')
+      );
     } catch (error) {
-      console.error('Error fetching vehicles:', error);
+      console.error('❌ Error fetching vehicles:', error);
     }
   };
 
+  /* ================= HELPERS ================= */
+
   const getStatusStyle = (status: string) => {
-    switch(status) {
-      case 'available': return { bg: 'bg-green-100', text: 'text-green-700', dot: '#10B981', icon: CheckCircle };
-      case 'on-trip': return { bg: 'bg-blue-100', text: 'text-blue-700', dot: '#2563EB', icon: Clock };
-      case 'offline': return { bg: 'bg-gray-100', text: 'text-gray-700', dot: '#9CA3AF', icon: AlertTriangle };
-      default: return { bg: 'bg-gray-100', text: 'text-gray-700', dot: '#9CA3AF', icon: AlertTriangle };
+    switch (status) {
+      case 'available':
+        return {
+          bg: 'bg-green-100',
+          text: 'text-green-700',
+          dot: '#10B981',
+          icon: CheckCircle
+        };
+      case 'on-trip':
+        return {
+          bg: 'bg-blue-100',
+          text: 'text-blue-700',
+          dot: '#2563EB',
+          icon: Clock
+        };
+      case 'offline':
+        return {
+          bg: 'bg-gray-100',
+          text: 'text-gray-700',
+          dot: '#9CA3AF',
+          icon: AlertTriangle
+        };
+      default:
+        return {
+          bg: 'bg-gray-100',
+          text: 'text-gray-700',
+          dot: '#9CA3AF',
+          icon: AlertTriangle
+        };
     }
   };
+
+  /* ================= ACTIONS ================= */
 
   const handleUnlockAttempt = () => {
     if (unlockCode === 'A1B2C3') {
@@ -88,18 +178,17 @@ const fetchDriver = async () => {
       setShowUnlockModal(false);
       setUnlockCode('');
       setShowVehicleModal(true);
-      alert('Vehicle assignment unlocked! You can now change the assigned vehicle.');
     } else {
-      alert('Incorrect unlock code. Please try again.');
+      alert('Incorrect unlock code');
       setUnlockCode('');
     }
   };
 
   const handleAssignVehicle = async (vehicle: Vehicle) => {
-    if (!driver) return;
+    if (!driver || !driverId) return;
 
     try {
-      const res = await fetch(`/api/driver/${driverId}`, {
+      await fetch(`/api/driver/${driverId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -108,9 +197,6 @@ const fetchDriver = async () => {
         })
       });
 
-      if (!res.ok) throw new Error('Failed to assign vehicle');
-
-      // Update vehicle status
       await fetch(`/api/vehicles/${vehicle._id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -125,30 +211,23 @@ const fetchDriver = async () => {
       setIsUnlocked(false);
       fetchDriver();
       fetchVehicles();
-      alert('Vehicle assigned successfully!');
     } catch (error) {
-      console.error('Error assigning vehicle:', error);
-      alert('Failed to assign vehicle');
+      console.error('❌ Error assigning vehicle:', error);
     }
   };
 
   const handleUnassignVehicle = async () => {
-    if (!driver || !driver.vehicleId || !confirm('Are you sure you want to unassign the current vehicle?')) return;
+    if (!driver || !driver.vehicleId || !driverId) return;
+
+    if (!confirm('Unassign current vehicle?')) return;
 
     try {
-      // Unassign from driver
-      const res = await fetch(`/api/driver/${driverId}`, {
+      await fetch(`/api/driver/${driverId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehicle: null,
-          vehicleId: null
-        })
+        body: JSON.stringify({ vehicle: null, vehicleId: null })
       });
 
-      if (!res.ok) throw new Error('Failed to unassign vehicle');
-
-      // Update vehicle status
       await fetch(`/api/vehicles/${driver.vehicleId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -159,19 +238,19 @@ const fetchDriver = async () => {
         })
       });
 
-      setIsUnlocked(false);
       fetchDriver();
       fetchVehicles();
-      alert('Vehicle unassigned successfully!');
     } catch (error) {
-      console.error('Error unassigning vehicle:', error);
-      alert('Failed to unassign vehicle');
+      console.error('❌ Error unassigning vehicle:', error);
     }
   };
 
   const handleChangeVehicleClick = () => {
     setShowUnlockModal(true);
   };
+
+  /* ================= RETURN BELOW ================= */
+
 
   if (loading) {
     return (
