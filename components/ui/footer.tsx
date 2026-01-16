@@ -122,7 +122,7 @@ const Footer = () => {
             <a href="#" className="hover:text-[#2563EB]">SLA</a>
             <div className="flex items-center gap-2 px-3 py-1 bg-[#F8F9FA] rounded border border-[#E5E7EB] cursor-pointer">
               <Globe size={14} />
-              <span>English (US)</span>
+              <span>English (India)</span>
             </div>
           </div>
         </div>
