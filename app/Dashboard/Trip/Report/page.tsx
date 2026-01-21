@@ -1,6 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Car, Users, Menu, Bell, Search, Settings, Plus, Eye, Edit, Printer, Filter, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
+import Link from 'next/link';
 
 export default function BookingsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -10,39 +11,55 @@ export default function BookingsPage() {
   const [filterDriver, setFilterDriver] = useState('all');
   const [filterDate, setFilterDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [trips, setTrips] = useState<any[]>([]);
+const [totalTrips, setTotalTrips] = useState(0);
+const [loading, setLoading] = useState(false);
 
   const itemsPerPage = 10;
 
-  const allTrips = [
-    { id: 'TRP-2401', customer: 'John Smith', phone: '+1 234-567-8901', driver: 'Mike Johnson', vehicle: 'Toyota Camry - ABC123', pickup: 'Airport Terminal 1', dropoff: 'Downtown Hotel', date: '2024-01-02', time: '09:30 AM', status: 'completed', fare: 45.00 },
-    { id: 'TRP-2402', customer: 'Sarah Williams', phone: '+1 234-567-8902', driver: 'David Brown', vehicle: 'Honda Accord - XYZ789', pickup: 'Hotel Plaza', dropoff: 'Shopping Mall', date: '2024-01-02', time: '10:15 AM', status: 'ongoing', fare: 28.50 },
-    { id: 'TRP-2403', customer: 'Robert Davis', phone: '+1 234-567-8903', driver: 'Chris Wilson', vehicle: 'Ford Fusion - DEF456', pickup: 'Train Station', dropoff: 'Office Park', date: '2024-01-02', time: '11:00 AM', status: 'completed', fare: 35.00 },
-    { id: 'TRP-2404', customer: 'Emily Jones', phone: '+1 234-567-8904', driver: 'James Taylor', vehicle: 'Hyundai Elantra - GHI321', pickup: 'Residential Area', dropoff: 'Airport Terminal 2', date: '2024-01-02', time: '12:45 PM', status: 'pending', fare: 52.00 },
-    { id: 'TRP-2405', customer: 'Michael Brown', phone: '+1 234-567-8905', driver: 'Tom Anderson', vehicle: 'Nissan Altima - JKL654', pickup: 'Downtown', dropoff: 'Sports Stadium', date: '2024-01-02', time: '02:30 PM', status: 'completed', fare: 38.00 },
-    { id: 'TRP-2406', customer: 'Lisa Anderson', phone: '+1 234-567-8906', driver: 'Mike Johnson', vehicle: 'Toyota Camry - ABC123', pickup: 'University Campus', dropoff: 'City Center', date: '2024-01-02', time: '03:15 PM', status: 'ongoing', fare: 22.50 },
-    { id: 'TRP-2407', customer: 'David Wilson', phone: '+1 234-567-8907', driver: 'Chris Wilson', vehicle: 'Ford Fusion - DEF456', pickup: 'Hospital', dropoff: 'Residential Complex', date: '2024-01-02', time: '04:00 PM', status: 'cancelled', fare: 0.00 },
-    { id: 'TRP-2408', customer: 'Jennifer Taylor', phone: '+1 234-567-8908', driver: 'David Brown', vehicle: 'Honda Accord - XYZ789', pickup: 'Restaurant District', dropoff: 'Concert Hall', date: '2024-01-01', time: '06:30 PM', status: 'completed', fare: 42.00 },
-    { id: 'TRP-2409', customer: 'Thomas Martinez', phone: '+1 234-567-8909', driver: 'James Taylor', vehicle: 'Hyundai Elantra - GHI321', pickup: 'Business District', dropoff: 'Airport Terminal 1', date: '2024-01-01', time: '07:15 PM', status: 'completed', fare: 55.00 },
-    { id: 'TRP-2410', customer: 'Patricia Garcia', phone: '+1 234-567-8910', driver: 'Tom Anderson', vehicle: 'Nissan Altima - JKL654', pickup: 'Suburban Area', dropoff: 'Convention Center', date: '2024-01-01', time: '08:00 PM', status: 'pending', fare: 48.00 },
-    { id: 'TRP-2411', customer: 'Christopher Lee', phone: '+1 234-567-8911', driver: 'Mike Johnson', vehicle: 'Toyota Camry - ABC123', pickup: 'Hotel Grand', dropoff: 'Beach Resort', date: '2024-01-01', time: '09:30 AM', status: 'completed', fare: 68.00 },
-    { id: 'TRP-2412', customer: 'Amanda White', phone: '+1 234-567-8912', driver: 'Chris Wilson', vehicle: 'Ford Fusion - DEF456', pickup: 'Shopping Center', dropoff: 'Medical Center', date: '2024-01-01', time: '10:45 AM', status: 'completed', fare: 31.50 }
-  ];
+  useEffect(() => {
+  const fetchTrips = async () => {
+    setLoading(true)
 
-  const filteredTrips = allTrips.filter(trip => {
-    const matchesSearch = trip.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trip.driver.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || trip.status === filterStatus;
-    const matchesDriver = filterDriver === 'all' || trip.driver === filterDriver;
-    const matchesDate = !filterDate || trip.date === filterDate;
-    return matchesSearch && matchesStatus && matchesDriver && matchesDate;
-  });
+    const params = new URLSearchParams({
+      search: searchTerm,
+      status: filterStatus,
+      driver: filterDriver,
+      date: filterDate,
+      page: currentPage.toString(),
+      limit: itemsPerPage.toString(),
+    })
 
-  const totalPages = Math.ceil(filteredTrips.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedTrips = filteredTrips.slice(startIndex, startIndex + itemsPerPage);
+    const res = await fetch(`/api/trip/report?${params.toString()}`)
 
-  const drivers = [...new Set(allTrips.map(t => t.driver))];
+if (!res.ok) {
+  console.error("API error:", await res.text())
+  setLoading(false)
+  return
+}
+
+const data = await res.json()
+
+    
+
+    setTrips(data.trips)
+    setTotalTrips(data.total)
+    setLoading(false)
+  }
+
+  fetchTrips()
+}, [searchTerm, filterStatus, filterDriver, filterDate, currentPage])
+
+
+
+  
+    const totalPages = Math.ceil(totalTrips / itemsPerPage)
+const displayedTrips = trips
+
+ 
+
+  const drivers = [...new Set(trips.map(t => t.driver?.name).filter(Boolean))]
+
 
   const getStatusStyle = (status:any) => {
     switch(status) {
@@ -175,19 +192,32 @@ export default function BookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {displayedTrips.map((trip, idx) => {
-                  const statusStyle = getStatusStyle(trip.status);
-                  return (
-                    <tr key={idx} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#E5E7EB' }}>
-                      <td className="px-6 py-4 font-medium" style={{ color: '#2563EB' }}>{trip.id}</td>
+                {loading ? (
+  <tr>
+    <td colSpan={9} className="text-center py-10">
+      Loading trips...
+    </td>
+  </tr>
+) : displayedTrips.length === 0 ? (
+  <tr>
+    <td colSpan={9} className="text-center py-10">
+      No trips found
+    </td>
+  </tr>
+) : (
+  displayedTrips.map((trip, idx) => {
+    const statusStyle = getStatusStyle(trip.status);
+    return (
+      <tr key={idx} className="border-b hover:bg-gray-50 transition-colors" style={{ borderColor: '#E5E7EB' }}>
+                      <td className="px-6 py-4 font-medium" style={{ color: '#2563EB' }}> {trip.tripId}</td>
                       <td className="px-6 py-4">
                         <div>
-                          <div className="font-medium" style={{ color: '#1A2332' }}>{trip.customer}</div>
-                          <div className="text-sm" style={{ color: '#9CA3AF' }}>{trip.phone}</div>
+                          <div className="font-medium" style={{ color: '#1A2332' }}>{trip.customer?.name}</div>
+                          <div className="text-sm" style={{ color: '#9CA3AF' }}>{trip.customer?.phone}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#5A6C7D' }}>{trip.driver}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>{trip.vehicle}</td>
+                      <td className="px-6 py-4" style={{ color: '#5A6C7D' }}>{trip.driver?.name}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>{trip.vehicle?.model} - {trip.vehicle?.number}</td>
                       <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>
                         <div>{trip.pickup}</div>
                         <div className="text-xs" style={{ color: '#9CA3AF' }}>→ {trip.dropoff}</div>
@@ -206,9 +236,9 @@ export default function BookingsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-blue-50 rounded-lg transition-colors" title="View">
+                          <Link href={`/Dashboard/Trip/Report/${trip._id}`} className="p-2 hover:bg-blue-50 rounded-lg transition-colors" title="View">
                             <Eye className="w-4 h-4" style={{ color: '#2563EB' }} />
-                          </button>
+                          </Link>
                           <button className="p-2 hover:bg-green-50 rounded-lg transition-colors" title="Edit">
                             <Edit className="w-4 h-4" style={{ color: '#10B981' }} />
                           </button>
@@ -216,17 +246,21 @@ export default function BookingsPage() {
                             <Printer className="w-4 h-4" style={{ color: '#F59E0B' }} />
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
 
           <div className="flex items-center justify-between px-6 py-4 border-t" style={{ borderColor: '#E5E7EB' }}>
             <div style={{ color: '#5A6C7D' }}>
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredTrips.length)} of {filteredTrips.length} trips
+             Showing {(currentPage - 1) * itemsPerPage + 1}
+to {Math.min(currentPage * itemsPerPage, totalTrips)}
+of {totalTrips} trips
+
             </div>
             <div className="flex items-center gap-2">
               <button

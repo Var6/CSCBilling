@@ -1,2 +1,23 @@
 @import "tailwindcss";
 
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  #invoice-content {
+    box-shadow: none;
+    margin: 0;
+    padding: 20px;
+  }
+  
+  @page {
+    margin: 0.5in;
+    size: A4;
+  }
+}
