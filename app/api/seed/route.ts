@@ -62,6 +62,7 @@ export async function GET() {
         status: "completed",
         fare: 45,
       },
+
       {
         tripId: "TRP-2402",
         customer: {
@@ -86,6 +87,7 @@ export async function GET() {
         status: "ongoing",
         fare: 28.5,
       },
+
       {
         tripId: "TRP-2403",
         customer: {
@@ -110,6 +112,7 @@ export async function GET() {
         status: "pending",
         fare: 52,
       },
+
       {
         tripId: "TRP-2404",
         customer: {
@@ -133,6 +136,31 @@ export async function GET() {
         tripTime: "04:00 PM",
         status: "cancelled",
         fare: 0,
+      },
+
+      {
+        tripId: "TRP-2405",
+        customer: {
+          name: "Michael Brown",
+          phone: "+1 234-567-8910",
+        },
+        driver: {
+          name: drivers[1].name,
+          driverId: drivers[1]._id,
+        },
+        vehicle: {
+          model: vehicles[1].model,
+          number: vehicles[1].plate,
+          vehicleId: vehicles[1]._id,
+        },
+        route: {
+          pickup: "Railway Station",
+          dropoff: "Business Park",
+        },
+        tripDate: new Date("2024-01-04"),
+        tripTime: "08:20 AM",
+        status: "completed",
+        fare: 35,
       },
     ])
 

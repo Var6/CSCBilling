@@ -1,7 +1,9 @@
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, model, models } from "mongoose";
 
-export interface ITrip extends Document {
-  tripId: string;
+/* ---------- Interface ---------- */
+export interface ITrip {
+  companyId: mongoose.Types.ObjectId;
+  tripNumber: string;
 
   customer: {
     name: string;
@@ -9,14 +11,16 @@ export interface ITrip extends Document {
   };
 
   driver: {
+    driverId: mongoose.Types.ObjectId;
     name: string;
-    driverId?: mongoose.Types.ObjectId;
+    phone: string;
   };
 
   vehicle: {
+    vehicleId: mongoose.Types.ObjectId;
+    plate: string;
     model: string;
-    number: string;
-    vehicleId?: mongoose.Types.ObjectId;
+    company: string;
   };
 
   route: {
@@ -24,22 +28,50 @@ export interface ITrip extends Document {
     dropoff: string;
   };
 
-  tripDate: Date;
-  tripTime: string;
+  timing: {
+    tripDate: Date;
+    startTime: string;
+    endTime?: string;
+  };
 
-  status: "completed" | "ongoing" | "pending" | "cancelled";
+  odometer: {
+    start: number;
+    end?: number;
+    totalKm?: number;
+  };
 
-  fare: number;
+  charges: {
+    costPerKm: number;
+    distanceCost: number;
+    waitingMinutes: number;
+    waitingCost: number;
+    additionalServices: {
+      id: string;
+      name: string;
+      price: number;
+    }[];
+    subtotal: number;
+    tax: number;
+    discount: number;
+    totalFare: number;
+  };
+
+  payment: {
+    method: "cash" | "upi" | "card" | "wallet";
+    status: "pending" | "paid";
+    referenceId?: string;
+  };
+
+  status: "pending" | "ongoing" | "completed" | "cancelled";
+  notes?: string;
 }
 
-const TripSchema: Schema<ITrip> = new Schema(
+/* ---------- Schema ---------- */
+const TripSchema = new Schema(
   {
-    tripId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
+    companyId: { type: Schema.Types.ObjectId, ref: "Company", required: true },
+
+    tripNumber: { type: String, unique: true },
 
     customer: {
       name: { type: String, required: true },
@@ -47,20 +79,16 @@ const TripSchema: Schema<ITrip> = new Schema(
     },
 
     driver: {
+      driverId: { type: Schema.Types.ObjectId, ref: "Driver", required: true },
       name: { type: String, required: true },
-      driverId: {
-        type: Schema.Types.ObjectId,
-        ref: "Driver",
-      },
+      phone: { type: String, required: true },
     },
 
     vehicle: {
+      vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle", required: true },
+      plate: { type: String, required: true },
       model: { type: String, required: true },
-      number: { type: String, required: true },
-      vehicleId: {
-        type: Schema.Types.ObjectId,
-        ref: "Vehicle",
-      },
+      company: { type: String, default: "" },
     },
 
     route: {
@@ -68,37 +96,65 @@ const TripSchema: Schema<ITrip> = new Schema(
       dropoff: { type: String, required: true },
     },
 
-    tripDate: {
-      type: Date,
-      required: true,
-      index: true,
+    timing: {
+      tripDate: { type: Date, required: true },
+      startTime: { type: String, required: true },
+      endTime: String,
     },
 
-    tripTime: {
-      type: String,
-      required: true,
+    odometer: {
+      start: { type: Number, required: true },
+      end: Number,
+      totalKm: Number,
+    },
+
+    charges: {
+      costPerKm: { type: Number, default: 20 },
+      distanceCost: { type: Number, default: 0 },
+      waitingMinutes: { type: Number, default: 0 },
+      waitingCost: { type: Number, default: 0 },
+      additionalServices: [{ id: String, name: String, price: Number }],
+      subtotal: { type: Number, default: 0 },
+      tax: { type: Number, default: 0 },
+      discount: { type: Number, default: 0 },
+      totalFare: { type: Number, required: true },
+    },
+
+    payment: {
+      method: {
+        type: String,
+        enum: ["cash", "upi", "card", "wallet"],
+        default: "cash",
+      },
+      status: {
+        type: String,
+        enum: ["pending", "paid"],
+        default: "pending",
+      },
+      referenceId: String,
     },
 
     status: {
       type: String,
-      enum: ["completed", "ongoing", "pending", "cancelled"],
+      enum: ["pending", "ongoing", "completed", "cancelled"],
       default: "pending",
-      index: true,
     },
 
-    fare: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    notes: String,
   },
-  {
-    timestamps: true, // createdAt & updatedAt
-  }
+  { timestamps: true }
 );
 
-// Prevent model overwrite in Next.js hot reload
-const Trip: Model<ITrip> =
-  mongoose.models.Trip || mongoose.model<ITrip>("Trip", TripSchema);
+/* ---------- Auto Trip Number (TS FIXED) ---------- */
+/* ---------- Auto Trip Number (Mongoose v7) ---------- */
+TripSchema.pre("save", async function () {
+  if (!this.tripNumber) {
+    const count = await mongoose.model("Trip").countDocuments();
+    this.tripNumber = `TRIP-${String(count + 1).padStart(6, "0")}`;
+  }
+});
 
+
+/* ---------- Model ---------- */
+const Trip = models.Trip || model("Trip", TripSchema);
 export default Trip;

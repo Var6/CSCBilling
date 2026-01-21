@@ -21,7 +21,11 @@ interface InvoiceData {
   discount?: number;
   gstRate?: number;
   upiPaid?: number;
-  vehicle?: string;
+  vehicle?: {
+  model: string;
+  number: string;
+  vehicleId?: string;
+};
   driverName?: string;
   notes?: string[];
 }
@@ -86,12 +90,15 @@ export function TripInvoice({ data }: { data: InvoiceData }) {
           <h3 className="font-bold mb-3" style={{ color: '#1A2332' }}>Trip Details</h3>
           <div className="space-y-2 text-sm">
             <p><span className="font-semibold">Trip Type:</span> {data.tripType}</p>
-            {data.vehicle && (
-              <div className="flex items-center gap-2">
-                <Car className="w-4 h-4" style={{ color: '#2563EB' }} />
-                <span><span className="font-semibold">Vehicle:</span> {data.vehicle}</span>
-              </div>
-            )}
+           {data.vehicle && (
+  <div className="flex items-center gap-2">
+    <Car className="w-4 h-4" style={{ color: '#2563EB' }} />
+    <span>
+      <span className="font-semibold">Vehicle:</span>{' '}
+      {data.vehicle.model} ({data.vehicle.number})
+    </span>
+  </div>
+)}
             {data.driverName && (
               <p><span className="font-semibold">Driver:</span> {data.driverName}</p>
             )}

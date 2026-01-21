@@ -1,6 +1,6 @@
-// src/app/trips/page.tsx
+//app/Trip/Booking/page.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Car, Menu, Bell, Settings, Plus, Edit, Trash2, MapPin, Calendar, X, User, Navigation, Clock, DollarSign, Package } from 'lucide-react';
 
 interface Customer {
@@ -27,25 +27,62 @@ interface AdditionalService {
   name: string;
   price: number;
 }
-
 interface Trip {
-  id: number;
-  customer: Customer;
-  car: Car;
-  driver: Driver;
+  id: string;
+  customer: {
+    name: string;
+    phone: string;
+  };
+  car: {
+    carNumber: string;
+    model: string;
+  };
+  driver: {
+    name: string;
+  };
   fromLocation: string;
   toLocation: string;
   startOdometer: number;
   endOdometer: number;
   totalKm: number;
-  costPerKm: number;
   waitingTime: number;
-  waitingCost: number;
   additionalServices: AdditionalService[];
   totalCost: number;
-  status: 'active' | 'completed';
+  status: "active" | "completed";
   createdAt: string;
 }
+
+interface DBTrip {
+  _id: string;
+  tripNumber: string;
+
+  customer: {
+    name: string;
+    phone: string;
+  };
+
+  driver: {
+    name: string;
+  };
+
+  vehicle: {
+    model: string;
+    number: string;
+  };
+
+  route: {
+    pickup: string;
+    dropoff: string;
+  };
+
+  charges: {
+    totalFare: number;
+  };
+
+  status: "completed" | "ongoing" | "pending" | "cancelled";
+  createdAt: string;
+}
+
 
 const COST_PER_KM = 20;
 const WAITING_COST_PER_MIN = 2;
@@ -62,6 +99,9 @@ export default function TripsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+ const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+
 
   const [customers] = useState<Customer[]>([
     { id: 1, name: 'Rajesh Kumar', phone: '+91 98765 43210' },
@@ -81,26 +121,7 @@ export default function TripsPage() {
     { id: 3, name: 'Chris Wilson', status: 'available' },
   ]);
 
-  const [trips, setTrips] = useState<Trip[]>([
-    {
-      id: 1,
-      customer: customers[0],
-      car: cars[2],
-      driver: drivers[1],
-      fromLocation: 'Connaught Place, Delhi',
-      toLocation: 'Gurugram Cyber City',
-      startOdometer: 15000,
-      endOdometer: 15035,
-      totalKm: 35,
-      costPerKm: COST_PER_KM,
-      waitingTime: 15,
-      waitingCost: 30,
-      additionalServices: [AVAILABLE_SERVICES[0], AVAILABLE_SERVICES[1]],
-      totalCost: 980,
-      status: 'active',
-      createdAt: '2025-01-04T10:30:00'
-    }
-  ]);
+
 
   const [formData, setFormData] = useState({
     customerId: '',
@@ -158,105 +179,127 @@ export default function TripsPage() {
     }));
   };
 
-  const handleSubmit = () => {
-    const start = parseFloat(formData.startOdometer);
-    const end = parseFloat(formData.endOdometer);
-    
-    if (end <= start) {
-      alert('End odometer must be greater than start odometer');
-      return;
-    }
+  const handleSubmit = async () => {
+  const start = Number(formData.startOdometer);
+  const end = Number(formData.endOdometer);
 
-    const selectedCar = cars.find(c => c.id === parseInt(formData.carId));
-    if (selectedCar?.status === 'on-trip' && !editingTrip) {
-      alert('This car is already assigned to an active trip');
-      return;
-    }
+  if (end <= start) {
+    alert("End odometer must be greater");
+    return;
+  }
 
-    const customer = customers.find(c => c.id === parseInt(formData.customerId))!;
-    const car = cars.find(c => c.id === parseInt(formData.carId))!;
-    const driver = drivers.find(d => d.id === parseInt(formData.driverId))!;
-    
-    const { totalKm, waitingCost, totalCost } = calculateTotals();
-    const selectedServices = AVAILABLE_SERVICES.filter(s => 
-      formData.selectedServices.includes(s.id)
-    );
+  const customer = customers.find(c => c.id === Number(formData.customerId))!;
+  const car = cars.find(c => c.id === Number(formData.carId))!;
+  const driver = drivers.find(d => d.id === Number(formData.driverId))!;
 
-    if (editingTrip) {
-      setTrips(trips.map(t => t.id === editingTrip.id ? {
-        ...t,
-        customer,
-        car,
-        driver,
-        fromLocation: formData.fromLocation,
-        toLocation: formData.toLocation,
-        startOdometer: start,
-        endOdometer: end,
-        totalKm,
-        waitingTime: parseFloat(formData.waitingTime),
-        waitingCost,
-        additionalServices: selectedServices,
-        totalCost,
-      } : t));
-    } else {
-      const newTrip: Trip = {
-        id: trips.length + 1,
-        customer,
-        car,
-        driver,
-        fromLocation: formData.fromLocation,
-        toLocation: formData.toLocation,
-        startOdometer: start,
-        endOdometer: end,
-        totalKm,
-        costPerKm: COST_PER_KM,
-        waitingTime: parseFloat(formData.waitingTime),
-        waitingCost,
-        additionalServices: selectedServices,
-        totalCost,
-        status: 'active',
-        createdAt: new Date().toISOString()
-      };
-      setTrips([newTrip, ...trips]);
-      
-      setCars(cars.map(c => 
-        c.id === car.id ? { ...c, status: 'on-trip' as const } : c
-      ));
-    }
-    
-    setShowModal(false);
-  };
+  const { totalCost } = calculateTotals();
 
-  const handleCompleteTrip = (tripId: number) => {
-    if (confirm('Mark this trip as completed?')) {
-      setTrips(trips.map(t => 
-        t.id === tripId ? { ...t, status: 'completed' as const } : t
-      ));
-      
-      const trip = trips.find(t => t.id === tripId);
-      if (trip) {
-        setCars(cars.map(c => 
-          c.id === trip.car.id ? { ...c, status: 'available' as const } : c
-        ));
-      }
-    }
-  };
+  await fetch("/api/trip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      customer: {
+        name: customer.name,
+        phone: customer.phone,
+      },
+      driver: {
+        name: driver.name,
+        driverId: driver.id,
+      },
+      vehicle: {
+        model: car.model,
+        number: car.carNumber,
+        vehicleId: car.id,
+      },
+      route: {
+        pickup: formData.fromLocation,
+        dropoff: formData.toLocation,
+      },
+      tripDate: new Date(),
+      tripTime: new Date().toLocaleTimeString("en-IN"),
+      fare: totalCost,
+      status: "ongoing",
+    }),
+  });
 
-  const handleDeleteTrip = (tripId: number) => {
-    if (confirm('Are you sure you want to delete this trip?')) {
-      const trip = trips.find(t => t.id === tripId);
-      if (trip && trip.status === 'active') {
-        setCars(cars.map(c => 
-          c.id === trip.car.id ? { ...c, status: 'available' as const } : c
-        ));
-      }
-      setTrips(trips.filter(t => t.id !== tripId));
-    }
-  };
+  // Reload trips
+ const res = await fetch("/api/trip");
+const data: DBTrip[] = await res.json();
+setTrips(mapTrips(data));
+
+
+  setShowModal(false);
+};
+
+
+ const handleCompleteTrip = async (id: string) => {
+  await fetch("/api/trip", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      _id: id,
+      status: "completed",
+    }),
+  });
+
+ const res = await fetch("/api/trip");
+const data: DBTrip[] = await res.json();
+setTrips(mapTrips(data));
+
+};
+
+const handleDeleteTrip = async (id: string) => {
+  if (!confirm("Delete this trip?")) return;
+
+  await fetch("/api/trip", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+
+  const res = await fetch("/api/trip");
+const data: DBTrip[] = await res.json();
+setTrips(mapTrips(data));
+
+};
+
 
   const { totalKm, kmCost, waitingCost, servicesCost, totalCost } = calculateTotals();
   const availableCars = cars.filter(c => c.status === 'available' || c.id === parseInt(formData.carId));
   const availableDrivers = drivers.filter(d => d.status === 'available' || d.id === parseInt(formData.driverId));
+  
+const mapTrips = (dbTrips: DBTrip[]): Trip[] =>
+  dbTrips.map((t) => ({
+    id: t._id,
+    customer: t.customer,
+    car: {
+      carNumber: t.vehicle.number,
+      model: t.vehicle.model,
+    },
+    driver: t.driver,
+    fromLocation: t.route.pickup,
+    toLocation: t.route.dropoff,
+    startOdometer: 0,
+    endOdometer: 0,
+    totalKm: 0,
+    waitingTime: 0,
+    additionalServices: [],
+    totalCost: t.charges.totalFare,
+    status: t.status === "completed" ? "completed" : "active",
+    createdAt: t.createdAt,
+  }));
+
+useEffect(() => {
+  async function loadTrips() {
+    const res = await fetch("/api/trip");
+    const data: DBTrip[] = await res.json();
+setTrips(mapTrips(data));
+    setLoading(false);
+  }
+  loadTrips();
+}, []);
+
+
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>

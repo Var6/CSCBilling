@@ -5,10 +5,10 @@
     margin: 0;
     padding: 0;
   }
-  
-  .print\\:hidden {
+  .no-print {
     display: none !important;
   }
+  
   
   #invoice-content {
     box-shadow: none;

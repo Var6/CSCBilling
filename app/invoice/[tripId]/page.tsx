@@ -3,19 +3,18 @@
 // 3. INVOICE PAGE (app/invoice/[tripId]/page.tsx)
 // ============================================
 'use client';
-import { use, useEffect, useState } from 'react';
+import React, { useEffect, useState, use } from 'react';
+
 import { TripInvoice } from '@/components/ux/TripInvoice';
 import { Printer, Download, Loader } from 'lucide-react';
+
 
 export default function InvoicePage({ params }: { params: Promise<{ tripId: string }> }) {
   const resolvedParams = use(params);
   const [invoiceData, setInvoiceData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInvoice();
-  }, [resolvedParams.tripId]);
-
+ 
   const fetchInvoice = async () => {
     try {
       const response = await fetch(`/api/invoice/${resolvedParams.tripId}`);
@@ -29,6 +28,9 @@ export default function InvoicePage({ params }: { params: Promise<{ tripId: stri
       setLoading(false);
     }
   };
+ useEffect(() => {
+    fetchInvoice();
+  }, [resolvedParams.tripId]);
 
   const handlePrint = () => {
     window.print();
@@ -67,7 +69,10 @@ export default function InvoicePage({ params }: { params: Promise<{ tripId: stri
   return (
     <div className="min-h-screen py-8" style={{ backgroundColor: '#F8F9FA' }}>
       {/* Action Buttons - Hidden in print */}
-      <div className="max-w-4xl mx-auto mb-6 flex justify-end gap-3 print:hidden px-4">
+      <div
+  className="max-w-4xl mx-auto mb-6 flex justify-end gap-3 px-4"
+  style={{ display: 'flex' }}
+>
         <button
           onClick={handlePrint}
           className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"

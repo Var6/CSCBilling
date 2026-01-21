@@ -242,9 +242,14 @@ const displayedTrips = trips
                           <button className="p-2 hover:bg-green-50 rounded-lg transition-colors" title="Edit">
                             <Edit className="w-4 h-4" style={{ color: '#10B981' }} />
                           </button>
-                          <button className="p-2 hover:bg-orange-50 rounded-lg transition-colors" title="Print">
-                            <Printer className="w-4 h-4" style={{ color: '#F59E0B' }} />
-                          </button>
+                         <Link
+  href={`/invoice/${trip.tripId}`} target="_blank"
+  className="p-2 hover:bg-orange-50 rounded-lg transition-colors"
+  title="Print Invoice"
+>
+  <Printer className="w-4 h-4" style={{ color: '#F59E0B' }} />
+</Link>
+
                         </div>
                         </td>
                       </tr>

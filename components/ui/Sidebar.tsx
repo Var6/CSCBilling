@@ -20,11 +20,11 @@ interface SidebarProps {
 
 const menuItems = [
   { label: 'Dashboard', href: '/Dashboard', icon: LayoutDashboard },
+  { label: 'Trips', href: '/Dashboard/Trip/Booking', icon: Calendar },
   { label: 'Drivers', href: '/Dashboard/Driver', icon: Users },
   { label: 'Vehicles', href: '/Dashboard/Car', icon: Car },
   { label: 'Payments', href: '/Dashboard/Payments', icon: MapPin },
   { label: 'Reports', href: '/Dashboard/Trip/Report', icon: FileText },
-  { label: 'Bookings', href: '/Dashboard/Trip/Booking', icon: Calendar },
 ];
 
 export default function Sidebar({ sidebarOpen }: SidebarProps) {
