@@ -51,6 +51,12 @@ interface Trip {
   status: "active" | "completed";
   createdAt: string;
 }
+interface TripsApiResponse {
+  trips: DBTrip[];
+  total: number;
+  page?: number;
+  limit?: number;
+}
 
 interface DBTrip {
   _id: string;
@@ -223,9 +229,10 @@ export default function TripsPage() {
   });
 
   // Reload trips
- const res = await fetch("/api/trip");
-const data: DBTrip[] = await res.json();
-setTrips(mapTrips(data));
+const res = await fetch("/api/trip");
+const data: TripsApiResponse = await res.json();
+setTrips(mapTrips(data.trips));
+
 
 
   setShowModal(false);
@@ -242,9 +249,10 @@ setTrips(mapTrips(data));
     }),
   });
 
- const res = await fetch("/api/trip");
-const data: DBTrip[] = await res.json();
-setTrips(mapTrips(data));
+const res = await fetch("/api/trip");
+const data: TripsApiResponse = await res.json();
+setTrips(mapTrips(data.trips));
+
 
 };
 
@@ -257,9 +265,10 @@ const handleDeleteTrip = async (id: string) => {
     body: JSON.stringify({ id }),
   });
 
-  const res = await fetch("/api/trip");
-const data: DBTrip[] = await res.json();
-setTrips(mapTrips(data));
+ const res = await fetch("/api/trip");
+const data: TripsApiResponse = await res.json();
+setTrips(mapTrips(data.trips));
+
 
 };
 
@@ -268,7 +277,7 @@ setTrips(mapTrips(data));
   const availableCars = cars.filter(c => c.status === 'available' || c.id === parseInt(formData.carId));
   const availableDrivers = drivers.filter(d => d.status === 'available' || d.id === parseInt(formData.driverId));
   
-const mapTrips = (dbTrips: DBTrip[]): Trip[] =>
+const mapTrips = (dbTrips: DBTrip[] = []): Trip[] =>
   dbTrips.map((t) => ({
     id: t._id,
     customer: t.customer,
@@ -284,18 +293,21 @@ const mapTrips = (dbTrips: DBTrip[]): Trip[] =>
     totalKm: 0,
     waitingTime: 0,
     additionalServices: [],
-    totalCost: t.charges.totalFare,
+    totalCost: t.charges?.totalFare ?? 0,
     status: t.status === "completed" ? "completed" : "active",
     createdAt: t.createdAt,
   }));
 
+
 useEffect(() => {
   async function loadTrips() {
     const res = await fetch("/api/trip");
-    const data: DBTrip[] = await res.json();
-setTrips(mapTrips(data));
+    const data: TripsApiResponse = await res.json();
+
+    setTrips(mapTrips(data.trips)); // ✅ FIX
     setLoading(false);
   }
+
   loadTrips();
 }, []);
 

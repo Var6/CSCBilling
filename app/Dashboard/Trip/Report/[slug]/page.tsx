@@ -135,10 +135,10 @@ const statusConfig = getStatusConfig(trip.status);
         <div className="mb-6">
           <button 
             onClick={() => window.history.back()}
-            className="flex items-center gap-2 mb-4 px-4 py-2 rounded-lg hover:bg-white transition-colors"
+            className="flex items-center gap-2 mb-4 px-4 py-2 rounded-lg hover:bg-white transition-colors "
             style={{ color: '#5A6C7D' }}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 hover:bg-blue-600" />
             Back to Trips
           </button>
           
