@@ -1,70 +1,6 @@
 import mongoose, { Schema, model, models } from "mongoose";
 
 /* ---------- Interface ---------- */
-export interface ITrip {
-  companyId: mongoose.Types.ObjectId;
-  tripNumber: string;
-
-  customer: {
-    name: string;
-    phone: string;
-  };
-
-  driver: {
-    driverId: mongoose.Types.ObjectId;
-    name: string;
-    phone: string;
-  };
-
-  vehicle: {
-    vehicleId: mongoose.Types.ObjectId;
-    plate: string;
-    model: string;
-    company: string;
-  };
-
-  route: {
-    pickup: string;
-    dropoff: string;
-  };
-
-  timing: {
-    tripDate: Date;
-    startTime: string;
-    endTime?: string;
-  };
-
-  odometer: {
-    start: number;
-    end?: number;
-    totalKm?: number;
-  };
-
-  charges: {
-    costPerKm: number;
-    distanceCost: number;
-    waitingMinutes: number;
-    waitingCost: number;
-    additionalServices: {
-      id: string;
-      name: string;
-      price: number;
-    }[];
-    subtotal: number;
-    tax: number;
-    discount: number;
-    totalFare: number;
-  };
-
-  payment: {
-    method: "cash" | "upi" | "card" | "wallet";
-    status: "pending" | "paid";
-    referenceId?: string;
-  };
-
-  status: "pending" | "ongoing" | "completed" | "cancelled";
-  notes?: string;
-}
 
 /* ---------- Schema ---------- */
 const TripSchema = new Schema(
@@ -74,6 +10,7 @@ const TripSchema = new Schema(
     tripNumber: { type: String, unique: true },
 
     customer: {
+      id: { type: Schema.Types.ObjectId, required: true , ref: "Customer", requird:true },
       name: { type: String, required: true },
       phone: { type: String, required: true },
     },

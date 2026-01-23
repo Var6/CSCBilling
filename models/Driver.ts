@@ -1,21 +1,6 @@
+import { IDriver } from '@/types/types';
 import mongoose, { Schema, model, models } from 'mongoose';
 
-export interface IDriver {
-  name: string;
-  phone: string;
-  company: string;
-  email: string;
-  status: 'available' | 'on-trip' | 'offline';
-  vehicle: string | null;
-  vehicleId: mongoose.Types.ObjectId | null;
-  license: string;
-  joinDate: Date;
-  rating: number;
-  trips: number;
-  address: string;
-  bloodGroup: string;
-  emergencyContact: string;
-}
 
 const driverSchema = new Schema<IDriver>(
   {

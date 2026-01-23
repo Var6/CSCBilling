@@ -1,44 +1,7 @@
+import { IVehicle } from '@/types/types';
 import mongoose, { Schema, model, models } from 'mongoose';
 
-export interface IVehicle {
-  name: string;
-  plate: string;
-  model: string;
-  year: number;
-  status: 'available' | 'in-use' | 'maintenance';
-  color: string;
-  fuelType: string;
-  mileage: string;
-  
-  // Documents
-  insurance: string;
-  insuranceExpiry: Date;
-  pollution: string;
-  pollutionExpiry: Date;
-  fitness: string;
-  fitnessExpiry: Date;
-  rcNumber: string;
-  company:string;
-  
-  // Driver Assignment
-  assignedDriverId: mongoose.Types.ObjectId | null;
-  assignedDriverName: string | null;
-  
-  // Earnings & Trips
-  totalEarnings: number;
-  monthlyEarnings: number;
-  totalTrips: number;
-  
-  // Maintenance Records (embedded)
-  maintenanceRecords: {
-    date: Date;
-    type: string;
-    description: string;
-    cost: number;
-    status: 'completed' | 'pending' | 'scheduled';
-    nextDue?: Date;
-  }[];
-}
+
 
 const vehicleSchema = new Schema<IVehicle>({
   name: { type: String, required: true },

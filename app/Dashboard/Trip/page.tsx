@@ -141,7 +141,7 @@ export default function DynamicTripsPage() {
 
   const loadCustomers = async () => {
     try {
-      const res = await fetch('/api/user');
+      const res = await fetch('/api/customer');
       const data = await res.json();
       setCustomers(data.users || []);
     } catch (error) {
