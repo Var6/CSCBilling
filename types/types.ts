@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 export interface IVehicle {
+  _id?: mongoose.Types.ObjectId;
   name: string;
   plate: string;
   model: string;
@@ -40,6 +41,7 @@ export interface IVehicle {
   }[];
 }
 export interface IDriver {
+  _id?: mongoose.Types.ObjectId;
   name: string;
   phone: string;
   company: string;
@@ -72,6 +74,7 @@ export interface ICustomer {
   totalRides: number;
 }
 export interface ITrip {
+  id?: mongoose.Types.ObjectId;
   companyId: mongoose.Types.ObjectId;
   tripNumber: string;
 
