@@ -200,7 +200,7 @@ export default function PaymentsPage() {
           <div className="text-sm" style={{ color: '#5A6C7D' }}>Total Income</div>
         </div>
 
-        {/* Total Expenses */}
+
         <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
@@ -218,7 +218,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Net Profit */}
-        <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
+        <div className="bg-nwhite opacity-90 rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
               <DollarSign className="w-6 h-6" style={{ color: '#10B981' }} />
