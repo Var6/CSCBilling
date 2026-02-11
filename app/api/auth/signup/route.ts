@@ -1,3 +1,4 @@
+//app/api/auth/signup/route.ts
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import CompanyAdmin from '@/models/CompanyAdmin';

@@ -3,6 +3,7 @@ import mongoose, { Schema, models } from 'mongoose'
 const CompanyAdminSchema = new Schema(
   {
     companyName: { type: String, required: true },
+    companyId:{type: mongoose.Schema.Types.ObjectId,},
     businessType: String,
     gstNumber: String,
     panNumber: String,

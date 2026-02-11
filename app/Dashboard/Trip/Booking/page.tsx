@@ -4,10 +4,11 @@ import { Car, Plus, Trash2, MapPin, X, User, Navigation, Clock, DollarSign, Pack
 import { IVehicle, IDriver, ITrip } from '@/types/types';
 
 type Customer = {
-  id: number;
+  _id: string;
   name: string;
   phone: string;
 };
+
 
 type AdditionalService = {
   id: string;
@@ -46,14 +47,14 @@ type DBTrip = {
 
 const COST_PER_KM = 20;
 const WAITING_COST_PER_MIN = 2;
-
-const AVAILABLE_SERVICES: AdditionalService[] = [
-  { id: 'toll', name: 'Toll Charges', price: 150 },
-  { id: 'parking', name: 'Parking Fee', price: 100 },
-  { id: 'luggage', name: 'Extra Luggage', price: 200 },
-  { id: 'ac', name: 'AC Charges', price: 300 },
-  { id: 'night', name: 'Night Charges (10PM-6AM)', price: 500 },
+const AVAILABLE_SERVICES = [
+  { id: 'toll', name: 'Toll Charges' },
+  { id: 'parking', name: 'Parking Fee' },
+  { id: 'luggage', name: 'Extra Luggage' },
+  { id: 'ac', name: 'AC Charges' },
+  { id: 'night', name: 'Night Charges' },
 ];
+
 
 export default function TripsPage() {
   const [showModal, setShowModal] = useState(false);
@@ -63,18 +64,52 @@ export default function TripsPage() {
   const [cars, setCars] = useState<IVehicle[]>([]);
   const [drivers, setDrivers] = useState<IDriver[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
 
-  const [formData, setFormData] = useState({
-    customerId: '',
-    carId: '',
-    driverId: '',
-    fromLocation: '',
-    toLocation: '',
-    startOdometer: '',
-    endOdometer: '',
-    waitingTime: '0',
-    selectedServices: [] as string[]
-  });
+ const [formData, setFormData] = useState<{
+  customerId: string;
+  carId: string;
+  driverId: string;
+  fromLocation: string;
+  toLocation: string;
+  startOdometer: string;
+  endOdometer: string;
+  waitingTime: string;
+  selectedServices: AdditionalService[];
+}>({
+  customerId: '',
+  carId: '',
+  driverId: '',
+  fromLocation: '',
+  toLocation: '',
+  startOdometer: '',
+  endOdometer: '',
+  waitingTime: '0',
+  selectedServices: [],
+});
+
+const [newCustomer, setNewCustomer] = useState({
+  name: "",
+  phone: "",
+  address: "",
+});
+const mapTrips = (dbTrips: DBTrip[] = []): Trip[] =>
+    dbTrips.map((t) => ({
+      id: t._id,
+      customer: t.customer,
+      car: { carNumber: t.vehicle.number || t.vehicle.plate || '', model: t.vehicle.model },
+      driver: t.driver,
+      fromLocation: t.route.pickup,
+      toLocation: t.route.dropoff,
+      startOdometer: 0,
+      endOdometer: 0,
+      totalKm: 0,
+      waitingTime: 0,
+      additionalServices: [],
+      totalCost: t.charges?.totalFare ?? 0,
+      status: t.status === "completed" ? "completed" : "active",
+      createdAt: t.createdAt,
+    }));
 
   useEffect(() => {
     async function loadData() {
@@ -115,10 +150,11 @@ const data = JSON.parse(text);
     const kmCost = totalKm * COST_PER_KM;
     const waitingMinutes = parseFloat(formData.waitingTime) || 0;
     const waitingCost = waitingMinutes * WAITING_COST_PER_MIN;
-    const servicesCost = formData.selectedServices.reduce((sum, serviceId) => {
-      const service = AVAILABLE_SERVICES.find(s => s.id === serviceId);
-      return sum + (service?.price || 0);
-    }, 0);
+   const servicesCost = formData.selectedServices.reduce(
+  (sum, service) => sum + (service.price || 0),
+  0
+);
+
     const totalCost = kmCost + waitingCost + servicesCost;
     return { totalKm, kmCost, waitingCost, servicesCost, totalCost };
   };
@@ -139,14 +175,27 @@ const data = JSON.parse(text);
     setShowModal(true);
   };
 
-  const toggleService = (serviceId: string) => {
-    setFormData(prev => ({
+const toggleService = (service: { id: string; name: string }) => {
+  setFormData(prev => {
+    const exists = prev.selectedServices.find(s => s.id === service.id);
+
+    if (exists) {
+      return {
+        ...prev,
+        selectedServices: prev.selectedServices.filter(s => s.id !== service.id),
+      };
+    }
+
+    return {
       ...prev,
-      selectedServices: prev.selectedServices.includes(serviceId)
-        ? prev.selectedServices.filter(id => id !== serviceId)
-        : [...prev.selectedServices, serviceId]
-    }));
-  };
+      selectedServices: [
+        ...prev.selectedServices,
+        { id: service.id, name: service.name, price: 0 },
+      ],
+    };
+  });
+};
+
 
   const handleSubmit = async () => {
     const start = Number(formData.startOdometer);
@@ -157,14 +206,28 @@ const data = JSON.parse(text);
       return;
     }
 
-    const customer = customers.find(c => c.id === Number(formData.customerId));
+   const customer = customers.find(
+  c => c._id === formData.customerId
+);
+
     const car = cars.find(c => c._id?.toString() === formData.carId);
     const driver = drivers.find(d => d._id?.toString() === formData.driverId);
 
-    if (!customer || !car || !driver) {
-      alert("Please select customer, car and driver");
-      return;
-    }
+    if (!customer) {
+  alert("Please select a customer");
+  return;
+}
+if (!car) {
+  alert("Please select a car");
+  return;
+}
+if (!driver) {
+  alert("Please select a driver");
+  return;
+}
+
+2025
+
 
     const { totalKm, kmCost, waitingCost } = calculateTotals();
 
@@ -184,7 +247,8 @@ const data = JSON.parse(text);
         distanceCost: kmCost,
         waitingTime: formData.waitingTime,
         waitingCost,
-        additionalServices: formData.selectedServices.map(id => AVAILABLE_SERVICES.find(s => s.id === id)!),
+       additionalServices: formData.selectedServices,
+
         fare: calculateTotals().totalCost,
         status: "ongoing",
       }),
@@ -196,16 +260,45 @@ const data = JSON.parse(text);
     setShowModal(false);
   };
 
-  const handleCompleteTrip = async (id: string) => {
-    await fetch("/api/trip", {
+ const handleCompleteTrip = async (id: string) => {
+  try {
+    // 1️⃣ Mark trip as completed
+    const updateRes = await fetch("/api/trip", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: id, status: "completed" }),
+      body: JSON.stringify({
+        _id: id,
+        status: "completed",
+      }),
     });
+
+    if (!updateRes.ok) {
+      const err = await updateRes.json();
+      alert(err.error || "Failed to complete trip");
+      return;
+    }
+
+    // 2️⃣ Reload trips
     const res = await fetch("/api/trip");
     const data = await res.json();
-    setTrips(mapTrips(data.trips));
-  };
+
+    const mappedTrips = mapTrips(data.trips);
+    setTrips(mappedTrips);
+
+    // 3️⃣ Count completed rides
+    const completedCount = mappedTrips.filter(
+      (t) => t.status === "completed"
+    ).length;
+
+    // 4️⃣ Notify user
+    alert(
+      `✅ Trip completed successfully!\n\n🚕 Total completed rides: ${completedCount}`
+    );
+  } catch (error) {
+    console.error("Complete trip error:", error);
+    alert("Something went wrong while completing the trip");
+  }
+};
 
   const handleDeleteTrip = async (id: string) => {
     if (!confirm("Delete this trip?")) return;
@@ -223,23 +316,7 @@ const data = JSON.parse(text);
   const availableCars = cars.filter(c => c.status === "available");
   const availableDrivers = drivers.filter(d => d.status === "available");
 
-  const mapTrips = (dbTrips: DBTrip[] = []): Trip[] =>
-    dbTrips.map((t) => ({
-      id: t._id,
-      customer: t.customer,
-      car: { carNumber: t.vehicle.number || t.vehicle.plate || '', model: t.vehicle.model },
-      driver: t.driver,
-      fromLocation: t.route.pickup,
-      toLocation: t.route.dropoff,
-      startOdometer: 0,
-      endOdometer: 0,
-      totalKm: 0,
-      waitingTime: 0,
-      additionalServices: [],
-      totalCost: t.charges?.totalFare ?? 0,
-      status: t.status === "completed" ? "completed" : "active",
-      createdAt: t.createdAt,
-    }));
+  
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
@@ -403,15 +480,106 @@ const data = JSON.parse(text);
 
             <div className="px-6 py-4 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Customer *</label>
-                  <select value={formData.customerId} onChange={(e) => setFormData({ ...formData, customerId: e.target.value })} className="w-full px-3 py-2.5 rounded-lg" style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}>
-                    <option value="">Select Customer</option>
-                    {customers.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
+               <div>
+  <label className="block text-sm font-medium mb-1">Customer *</label>
+
+  <div className="flex gap-2">
+    <select
+      value={formData.customerId}
+      onChange={(e) =>
+        setFormData({ ...formData, customerId: e.target.value })
+      }
+      className="flex-1 px-3 py-2.5 rounded-lg border"
+    >
+      <option value="">Select Customer</option>
+      {customers.map(c => (
+        <option key={c._id} value={c._id}>
+          {c.name} ({c.phone})
+        </option>
+      ))}
+    </select>
+
+    <button
+      type="button"
+      onClick={() => setShowCustomerForm(true)}
+      className="px-3 py-2 rounded-lg border text-sm font-medium"
+    >
+      + Add
+    </button>
+  </div>
+  {showCustomerForm && (
+  <div className="p-4 rounded-lg border bg-gray-50 space-y-3">
+    <h4 className="font-semibold text-sm">Add New Customer</h4>
+
+    <input
+      placeholder="Customer Name"
+      className="w-full px-3 py-2 border rounded"
+      value={newCustomer.name}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, name: e.target.value })
+      }
+    />
+
+    <input
+      placeholder="Phone Number"
+      className="w-full px-3 py-2 border rounded"
+      value={newCustomer.phone}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, phone: e.target.value })
+      }
+    />
+
+    <input
+      placeholder="Address"
+      className="w-full px-3 py-2 border rounded"
+      value={newCustomer.address}
+      onChange={(e) =>
+        setNewCustomer({ ...newCustomer, address: e.target.value })
+      }
+    />
+
+    <div className="flex gap-2">
+      <button
+        onClick={async () => {
+          if (!newCustomer.name || !newCustomer.phone || !newCustomer.address) {
+            alert("All fields required");
+            return;
+          }
+
+          const res = await fetch("/api/customer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newCustomer),
+          });
+
+          const created = await res.json();
+
+          setCustomers(prev => [created, ...prev]);
+          setFormData(prev => ({
+            ...prev,
+            customerId: created._id,
+          }));
+
+          setNewCustomer({ name: "", phone: "", address: "" });
+          setShowCustomerForm(false);
+        }}
+        className="px-4 py-2 bg-blue-600 text-white rounded"
+      >
+        Save Customer
+      </button>
+
+      <button
+        onClick={() => setShowCustomerForm(false)}
+        className="px-4 py-2 border rounded"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+
+</div>
+
 
                 <div>
                   <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
@@ -475,15 +643,51 @@ const data = JSON.parse(text);
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#1A2332' }}>Additional Services (Optional)</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {AVAILABLE_SERVICES.map(service => (
-                    <label key={service.id} className="flex items-center gap-2 p-3 rounded-lg cursor-pointer hover:bg-gray-50" style={{ border: formData.selectedServices.includes(service.id) ? '2px solid #2563EB' : '1px solid #E5E7EB' }}>
-                      <input type="checkbox" checked={formData.selectedServices.includes(service.id)} onChange={() => toggleService(service.id)} className="w-4 h-4" />
-                      <div className="flex-1">
-                        <p className="font-medium text-sm" style={{ color: '#1A2332' }}>{service.name}</p>
-                        <p className="text-xs" style={{ color: '#5A6C7D' }}>₹{service.price}</p>
-                      </div>
-                    </label>
-                  ))}
+                   {AVAILABLE_SERVICES.map(service => {
+      const selected = formData.selectedServices.find(s => s.id === service.id);
+
+      return (
+        <div
+          key={service.id}
+          className="flex items-center gap-3 p-3 rounded-lg"
+          style={{
+            border: selected ? '2px solid #2563EB' : '1px solid #E5E7EB',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={() => toggleService(service)}
+            className="w-4 h-4"
+          />
+
+          <div className="flex-1">
+            <p className="font-medium text-sm" style={{ color: '#1A2332' }}>
+              {service.name}
+            </p>
+          </div>
+
+          {selected && (
+            <input
+              type="number"
+              min="0"
+              placeholder="₹ Amount"
+              value={selected.price}
+              onChange={(e) => {
+                const price = Number(e.target.value);
+                setFormData(prev => ({
+                  ...prev,
+                  selectedServices: prev.selectedServices.map(s =>
+                    s.id === service.id ? { ...s, price } : s
+                  ),
+                }));
+              }}
+              className="w-24 px-2 py-1 border rounded-md text-sm"
+            />
+          )}
+        </div>
+      );
+    })}
                 </div>
               </div>
 

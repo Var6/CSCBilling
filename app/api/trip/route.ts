@@ -3,7 +3,8 @@ import { connectDB } from "@/lib/mongodb"
 import Trip from "@/models/Trip"
 import Driver from "@/models/Driver"
 import Vehicle from "@/models/Vehicle"
-
+import { Customer } from "@/models/Customer"
+import CompanyAdmin from "@/models/CompanyAdmin"
 /* =========================
    GET — List Trips
 ========================= */
@@ -41,64 +42,94 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: any) {
   try {
     await connectDB()
+
     const body = await req.json()
 
-    const vehicle = await Vehicle.findById(body.vehicle.vehicleId)
-    const driver = await Driver.findById(body.driver.driverId)
+    // ✅ companyId from logged-in user
+    const companyId = req.user.companyId
 
-    if (!vehicle || !driver) {
-      return NextResponse.json({ error: "Invalid vehicle or driver" }, { status: 400 })
+    if (!companyId) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
 
-    if (vehicle.assignedDriverId?.toString() !== driver._id.toString()) {
-      return NextResponse.json({ error: "Driver not assigned to vehicle" }, { status: 400 })
+    /* ---------------- CUSTOMER (ON THE GO) ---------------- */
+    let customer = await Customer.findOne({
+      phone: body.customer.phone,
+      companyId,
+    })
+
+    if (!customer) {
+      customer = await Customer.create({
+        companyId,
+        name: body.customer.name,
+        phone: body.customer.phone,
+        address: body.customer.address || "",
+      })
     }
 
+    /* ---------------- DRIVER & VEHICLE ---------------- */
+    const driver = await Driver.findById(body.driverId)
+    const vehicle = await Vehicle.findById(body.vehicleId)
+
+    if (!driver || !vehicle) {
+      return NextResponse.json(
+        { error: "Invalid driver or vehicle" },
+        { status: 400 }
+      )
+    }
+
+    /* ---------------- CREATE TRIP ---------------- */
     const trip = await Trip.create({
-      tripNumber: `TRIP-${Date.now()}`,
-      customer: body.customer,
+      companyId,
+      tripNumber: `TRP-${Date.now()}`,
+
+      customer: {
+        id: customer._id,
+        name: customer.name,
+        phone: customer.phone,
+      },
+
       driver: {
         driverId: driver._id,
         name: driver.name,
         phone: driver.phone,
       },
+
       vehicle: {
         vehicleId: vehicle._id,
         plate: vehicle.plate,
         model: vehicle.model,
       },
+
       route: body.route,
-      timing: {
-        tripDate: body.tripDate,
-        startTime: body.tripTime,
-      },
-      odometer: {
-        start: body.startOdometer,
-        end: body.endOdometer,
-        totalKm: body.totalKm,
-      },
-      charges: {
-        costPerKm: 20,
-        distanceCost: body.distanceCost,
-        waitingMinutes: body.waitingTime,
-        waitingCost: body.waitingCost,
-        additionalServices: body.additionalServices || [],
-        totalFare: body.fare,
-      },
+      tripDate: body.tripDate,
+      tripTime: body.tripTime,
+      fare: body.fare,
       status: "ongoing",
     })
 
-    // ✅ Correct updates
-    await Vehicle.findByIdAndUpdate(vehicle._id, { status: "in-use" })
-    await Driver.findByIdAndUpdate(driver._id, { status: "on-trip" })
+    /* ---------------- LOCK DRIVER & VEHICLE ---------------- */
+    await Driver.findByIdAndUpdate(driver._id, {
+      status: "on-trip",
+    })
+
+    await Vehicle.findByIdAndUpdate(vehicle._id, {
+      status: "in-use",
+    })
 
     return NextResponse.json({ trip }, { status: 201 })
   } catch (err) {
-    console.error("POST /api/trip error:", err)
-    return NextResponse.json({ error: "Failed to create trip" }, { status: 500 })
+    console.error(err)
+    return NextResponse.json(
+      { error: "Failed to create trip" },
+      { status: 500 }
+    )
   }
 }
 
