@@ -188,7 +188,7 @@ export default function NotFound() {
             </div>
             <div className="text-left">
               <p className="font-medium" style={{ color: '#1E40AF' }}>
-                Auto-redirecting to Dashboard
+                Auto-redirecting to Dashboard. 
               </p>
               <p className="text-sm" style={{ color: '#60A5FA' }}>
                 Redirecting in {countdown} seconds...
