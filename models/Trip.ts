@@ -10,7 +10,7 @@ const TripSchema = new Schema(
     tripNumber: { type: String, unique: true },
 
     customer: {
-      id: { type: Schema.Types.ObjectId, required: true , ref: "Customer", requird:true },
+      id: { type: Schema.Types.ObjectId, required: true, ref: "Customer" },
       name: { type: String, required: true },
       phone: { type: String, required: true },
     },

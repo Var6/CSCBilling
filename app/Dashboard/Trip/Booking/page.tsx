@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Car, Plus, Trash2, MapPin, X, User, Navigation, Clock, DollarSign, Package } from 'lucide-react';
+import { Car, Plus, Trash2, MapPin, X, User, Navigation, Clock, DollarSign, Package, FileText } from 'lucide-react';
+import Link from 'next/link';
 import { IVehicle, IDriver, ITrip } from '@/types/types';
 
 type Customer = {
@@ -226,9 +227,6 @@ if (!driver) {
   return;
 }
 
-2025
-
-
     const { totalKm, kmCost, waitingCost } = calculateTotals();
 
     await fetch("/api/trip", {
@@ -370,6 +368,14 @@ if (!driver) {
                     <button onClick={() => handleCompleteTrip(trip.id)} className="px-4 py-2 rounded-lg font-medium text-white transition-all" style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}>
                       Complete
                     </button>
+                  )}
+                  {trip.status === 'completed' && (
+                    <Link href={`/invoice/${trip.id}`} target="_blank">
+                      <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-white text-sm transition-all" style={{ background: 'linear-gradient(135deg, #8B5CF6, #7C3AED)' }}>
+                        <FileText className="w-4 h-4" />
+                        GST Invoice
+                      </button>
+                    </Link>
                   )}
                   <button onClick={() => handleDeleteTrip(trip.id)} className="p-2 rounded-lg transition-all hover:bg-red-50" style={{ border: '1px solid #EF4444', color: '#EF4444' }}>
                     <Trash2 className="w-4 h-4" />
