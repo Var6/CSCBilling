@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Car, Plus, Trash2, MapPin, X, User, Navigation, Clock, DollarSign, Package, FileText } from 'lucide-react';
+import { Car, Plus, Trash2, MapPin, X, User, Navigation, Clock, DollarSign, Package, FileText, Download } from 'lucide-react';
 import Link from 'next/link';
 import { IVehicle, IDriver, ITrip } from '@/types/types';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 type Customer = {
   _id: string;
@@ -323,10 +324,27 @@ if (!driver) {
           <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Trip Management</h1>
           <p style={{ color: '#5A6C7D' }}>Create and manage trips</p>
         </div>
-        <button onClick={handleAddTrip} className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-          <Plus className="w-5 h-5" />
-          Create Trip
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportToExcel(
+              'Trips', 'Trips',
+              ['Trip ID','Customer Name','Customer Phone','Driver','Vehicle No','Vehicle Model','From','To','Total KM','Waiting (min)','Total Cost (₹)','Status','Date'],
+              trips.map(t => [t.id, t.customer.name, t.customer.phone, t.driver.name,
+                t.car.carNumber, t.car.model, t.fromLocation, t.toLocation,
+                t.totalKm, t.waitingTime, t.totalCost, t.status,
+                new Date(t.createdAt).toLocaleDateString('en-IN')])
+            )}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+            style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </button>
+          <button onClick={handleAddTrip} className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+            <Plus className="w-5 h-5" />
+            Create Trip
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Car, Users, Menu, Bell, Search, Settings, Plus, Eye, Edit, Printer, Filter, ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
+import { Car, Users, Menu, Bell, Search, Settings, Plus, Eye, Edit, Printer, Filter, ChevronLeft, ChevronRight, Calendar, X, Download } from 'lucide-react';
 import Link from 'next/link';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 export default function BookingsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -87,10 +88,29 @@ const displayedTrips = trips
             <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Trip Reports</h1>
             <p style={{ color: '#5A6C7D' }}>Manage all trips and bookings</p>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-            <Plus className="w-5 h-5" />
-            New Trip
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => exportToExcel(
+                'Trip_Report', 'Trip Report',
+                ['Trip ID','Customer','Phone','Driver','Vehicle','Pickup','Dropoff','Date','Time','Status','Fare (₹)'],
+                trips.map(t => [
+                  t.tripId || t._id, t.customer?.name||'', t.customer?.phone||'',
+                  t.driver?.name||'', `${t.vehicle?.model||''} ${t.vehicle?.number||''}`.trim(),
+                  t.pickup||'', t.dropoff||'', t.date||'', t.time||'',
+                  t.status, t.fare || 0
+                ])
+              )}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+              style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+            >
+              <Download className="w-4 h-4" />
+              Export Excel
+            </button>
+            <button className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+              <Plus className="w-5 h-5" />
+              New Trip
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm mb-6 p-6" style={{ border: '1px solid #E5E7EB' }}>

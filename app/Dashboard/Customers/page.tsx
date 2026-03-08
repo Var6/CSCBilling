@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, X, Edit2, Trash2, Users, Phone, Mail, MapPin, UserCheck, UserX, Ban } from 'lucide-react';
+import { Plus, Search, X, Edit2, Trash2, Users, Phone, Mail, MapPin, UserCheck, UserX, Ban, Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 type Customer = {
   _id: string;
@@ -147,14 +148,29 @@ export default function CustomersPage() {
           <h1 className="text-3xl font-bold" style={{ color: '#1A2332' }}>Customers</h1>
           <p className="text-sm mt-1" style={{ color: '#5A6C7D' }}>Manage your customer base</p>
         </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
-          style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
-        >
-          <Plus className="w-5 h-5" />
-          Add Customer
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportToExcel(
+              'Customers', 'Customers',
+              ['Name','Phone','Email','Address','Member ID','Status','Joined Date'],
+              customers.map(c => [c.name, c.phone, c.email||'', c.address||'', c.memberId||'', c.status,
+                c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : ''])
+            )}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+            style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </button>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+          >
+            <Plus className="w-5 h-5" />
+            Add Customer
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

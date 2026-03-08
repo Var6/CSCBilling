@@ -6,6 +6,7 @@ import {
   Download, ArrowUpRight, ArrowDownRight, Wallet, RefreshCw,
   Plus, FileText
 } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 type Trip = {
   _id: string;
@@ -140,6 +141,21 @@ export default function PaymentsPage() {
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
+          </button>
+          <button
+            onClick={() => exportToExcel(
+              'Transactions', 'Transactions',
+              ['Date','Type','Category','Description','Driver','Amount (₹)','Status'],
+              allTxns.map(t => [
+                new Date(t.date).toLocaleDateString('en-IN'), t.type, t.category,
+                t.description, t.driver, t.amount, t.status
+              ])
+            )}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+            style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
           </button>
           <Link href="/Dashboard/Finance">
             <button

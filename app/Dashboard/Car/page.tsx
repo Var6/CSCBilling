@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Car, Plus, Edit, Trash2, Calendar, X, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Car, Plus, Edit, Trash2, Calendar, X, CheckCircle, XCircle, Clock, AlertCircle, Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportToExcel';
 import Link from 'next/link';
 
 interface Vehicle {
@@ -277,14 +278,32 @@ export default function VehiclesPage() {
           <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Fleet Management</h1>
           <p style={{ color: '#5A6C7D' }}>Manage your vehicle fleet</p>
         </div>
-        <button 
-          onClick={handleAddVehicle}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
-          style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
-        >
-          <Plus className="w-5 h-5" />
-          Add Vehicle
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => exportToExcel(
+              'Vehicles', 'Fleet',
+              ['Name','Plate','Model','Year','Status','Color','Fuel Type','RC Number','Insurance Expiry','Pollution Expiry','Fitness Expiry','Assigned Driver','Total Earnings','Monthly Earnings','Total Trips'],
+              vehicles.map(v => [v.name, v.plate, v.model, v.year, v.status, v.color, v.fuelType, v.rcNumber,
+                v.insuranceExpiry ? new Date(v.insuranceExpiry).toLocaleDateString('en-IN') : '',
+                v.pollutionExpiry ? new Date(v.pollutionExpiry).toLocaleDateString('en-IN') : '',
+                v.fitnessExpiry ? new Date(v.fitnessExpiry).toLocaleDateString('en-IN') : '',
+                v.assignedDriverName||'', v.totalEarnings||0, v.monthlyEarnings||0, v.totalTrips||0])
+            )}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+            style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+          >
+            <Download className="w-4 h-4" />
+            Export Excel
+          </button>
+          <button
+            onClick={handleAddVehicle}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+          >
+            <Plus className="w-5 h-5" />
+            Add Vehicle
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

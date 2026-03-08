@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Car, Users, Menu, Bell, Settings, Plus, Edit, Trash2, Phone, Mail, MapPin, Calendar, X, User, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Car, Users, Menu, Bell, Settings, Plus, Edit, Trash2, Phone, Mail, MapPin, Calendar, X, User, CheckCircle, XCircle, Clock, Download } from 'lucide-react';
+import { exportToExcel } from '@/lib/exportToExcel';
 import Link from 'next/link';
 
 interface Driver {
@@ -226,14 +227,30 @@ export default function DriversPage() {
             <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Drivers Management</h1>
             <p style={{ color: '#5A6C7D' }}>Manage your driver fleet</p>
           </div>
-          <button 
-            onClick={handleAddDriver}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
-            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
-          >
-            <Plus className="w-5 h-5" />
-            Add Driver
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => exportToExcel(
+                'Drivers', 'Drivers',
+                ['Name','Phone','Email','Status','License No','Join Date','Rating','Total Trips','Blood Group','Emergency Contact','Address'],
+                drivers.map(d => [d.name, d.phone, d.email, d.status, d.license,
+                  d.joinDate ? new Date(d.joinDate).toLocaleDateString('en-IN') : '',
+                  d.rating, d.trips, d.bloodGroup||'', d.emergencyContact||'', d.address||''])
+              )}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
+              style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
+            >
+              <Download className="w-4 h-4" />
+              Export Excel
+            </button>
+            <button
+              onClick={handleAddDriver}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+            >
+              <Plus className="w-5 h-5" />
+              Add Driver
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
