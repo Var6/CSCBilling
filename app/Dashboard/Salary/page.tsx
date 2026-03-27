@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Users, ChevronLeft, ChevronRight, Calendar, IndianRupee,
-  CheckCircle, XCircle, Sun, TrendingUp, Download, Save,
+  CheckCircle, XCircle, Sun, TrendingUp, Download, Save, Lock,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportToExcel';
 
@@ -80,6 +80,15 @@ export default function SalaryPage() {
   const [dirty,       setDirty]       = useState<Set<string>>(new Set());
   const [saving,      setSaving]      = useState(false);
   const [loading,     setLoading]     = useState(false);
+  const [isAdmin,     setIsAdmin]     = useState(false);
+
+  // ── fetch current user role ───────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => { if (data?.user?.role === 'ADMIN') setIsAdmin(true); })
+      .catch(console.error);
+  }, []);
 
   // ── fetch drivers ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -287,12 +296,20 @@ export default function SalaryPage() {
         )}
 
         {/* ── Salary Breakdown Note ───────────────────────────────────────── */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm" style={{ color: '#1E40AF' }}>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm" style={{ color: '#1E40AF' }}>
           <strong>Salary formula:</strong> &nbsp;
           Present day = (Base ÷ {WORKING_DAYS}) + (KM × per-km rate) &nbsp;|&nbsp;
           Holiday worked = 1.5 × daily base + KM incentive &nbsp;|&nbsp;
           Absent = ₹0
         </div>
+
+        {/* ── Holiday permission note ──────────────────────────────────────── */}
+        {!isAdmin && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-sm" style={{ color: '#92400E' }}>
+            <Lock className="w-4 h-4 shrink-0" />
+            <span>Holiday marking is restricted to <strong>Admin</strong> only. Contact your admin to mark a holiday.</span>
+          </div>
+        )}
 
         {/* ── Attendance Calendar / Table ─────────────────────────────────── */}
         {loading ? (
@@ -355,23 +372,27 @@ export default function SalaryPage() {
 
                         {/* Status toggle buttons */}
                         <td className="px-4 py-2.5">
-                          <div className="flex gap-1.5">
+                          <div className="flex gap-1.5 flex-wrap">
                             {(['present', 'absent', 'holiday'] as AttendanceStatus[]).map(s => {
                               const st = statusStyle[s];
                               const Icon = st.icon;
                               const active = status === s;
+                              const lockedHoliday = s === 'holiday' && !isAdmin;
                               return (
                                 <button
                                   key={s}
-                                  onClick={() => updateDay(day, { status: s })}
-                                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
+                                  onClick={() => !lockedHoliday && updateDay(day, { status: s })}
+                                  disabled={lockedHoliday}
+                                  title={lockedHoliday ? 'Only admin can mark holidays' : undefined}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all disabled:cursor-not-allowed"
                                   style={{
                                     backgroundColor: active ? st.bg : '#F3F4F6',
-                                    color: active ? st.text : '#9CA3AF',
+                                    color: active ? st.text : lockedHoliday ? '#D1D5DB' : '#9CA3AF',
                                     border: active ? `1.5px solid ${st.text}` : '1.5px solid transparent',
+                                    opacity: lockedHoliday ? 0.45 : 1,
                                   }}
                                 >
-                                  <Icon className="w-3 h-3" />
+                                  {lockedHoliday ? <Lock className="w-3 h-3" /> : <Icon className="w-3 h-3" />}
                                   {st.label}
                                 </button>
                               );
