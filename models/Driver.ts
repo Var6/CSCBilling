@@ -18,6 +18,8 @@ const driverSchema = new Schema<IDriver>(
     address: { type: String, default: '' },
     bloodGroup: { type: String, default: '' },
     emergencyContact: { type: String, default: '' },
+    baseSalary: { type: Number, default: 0 },       // monthly base salary (₹)
+    perKmRate: { type: Number, default: 0 },         // incentive per km driven (₹)
   },
   {
     timestamps: true,

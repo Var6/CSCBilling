@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
       joinDate: body.joinDate ? new Date(body.joinDate) : new Date(),
       rating: body.rating || 0,
       trips: body.trips || 0,
+      baseSalary: body.baseSalary || 0,
+      perKmRate: body.perKmRate || 0,
     });
 
     return NextResponse.json(driver, { status: 201 });

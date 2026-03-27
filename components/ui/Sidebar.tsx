@@ -13,6 +13,7 @@ import {
   DollarSign,
   UserCheck,
   BarChart2,
+  Wallet,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const menuItems = [
   { label: 'Vehicles', href: '/Dashboard/Car', icon: Car },
   { label: 'Customers', href: '/Dashboard/Customers', icon: UserCheck },
   { label: 'Finance', href: '/Dashboard/Finance', icon: DollarSign },
+  { label: 'Salary', href: '/Dashboard/Salary', icon: Wallet },
   { label: 'Payments', href: '/Dashboard/Payments', icon: MapPin },
   { label: 'Reports', href: '/Dashboard/Trip/Report', icon: BarChart2 },
 ];

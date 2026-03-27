@@ -56,6 +56,8 @@ export interface IDriver {
   address: string;
   bloodGroup: string;
   emergencyContact: string;
+  baseSalary: number;
+  perKmRate: number;
 }
 export interface ICustomer {
     id?: mongoose.Types.ObjectId;

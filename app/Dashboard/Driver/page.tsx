@@ -18,6 +18,8 @@ interface Driver {
   address?: string;
   bloodGroup?: string;
   emergencyContact?: string;
+  baseSalary?: number;
+  perKmRate?: number;
 }
 
 export default function DriversPage() {
@@ -42,7 +44,9 @@ export default function DriversPage() {
     status: 'offline' as 'available' | 'on-trip' | 'offline',
     joinDate: new Date().toISOString().split('T')[0],
     rating: 0,
-    trips: 0
+    trips: 0,
+    baseSalary: 0,
+    perKmRate: 0,
   });
 
   useEffect(() => {
@@ -84,7 +88,9 @@ export default function DriversPage() {
       status: 'offline',
       joinDate: new Date().toISOString().split('T')[0],
       rating: 0,
-      trips: 0
+      trips: 0,
+      baseSalary: 0,
+      perKmRate: 0,
     });
     setShowModal(true);
   };
@@ -103,7 +109,9 @@ export default function DriversPage() {
       status: driver.status,
       joinDate: driver.joinDate ? new Date(driver.joinDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       rating: driver.rating || 0,
-      trips: driver.trips || 0
+      trips: driver.trips || 0,
+      baseSalary: driver.baseSalary || 0,
+      perKmRate: driver.perKmRate || 0,
     });
     setShowModal(true);
   };
@@ -129,6 +137,8 @@ export default function DriversPage() {
         joinDate: formData.joinDate ? new Date(formData.joinDate) : new Date(),
         rating: Number(formData.rating) || 0,
         trips: Number(formData.trips) || 0,
+        baseSalary: Number(formData.baseSalary) || 0,
+        perKmRate: Number(formData.perKmRate) || 0,
       };
 
       const method = editingDriver ? 'PATCH' : 'POST';
@@ -164,6 +174,8 @@ export default function DriversPage() {
         joinDate: new Date().toISOString().split('T')[0],
         rating: 0,
         trips: 0,
+        baseSalary: 0,
+        perKmRate: 0,
       });
       
       fetchDrivers();
@@ -397,6 +409,8 @@ export default function DriversPage() {
                   { label: 'Join Date', key: 'joinDate', type: 'date' },
                   { label: 'Rating', key: 'rating', type: 'number', placeholder: '0' },
                   { label: 'Trips', key: 'trips', type: 'number', placeholder: '0' },
+                  { label: 'Base Salary (₹/month)', key: 'baseSalary', type: 'number', placeholder: '15000' },
+                  { label: 'Per KM Rate (₹/km)', key: 'perKmRate', type: 'number', placeholder: '2' },
                 ].map((field) => (
                   <div key={field.key}>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
