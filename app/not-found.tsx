@@ -80,7 +80,7 @@ export default function NotFound() {
             This route seems to have taken a wrong turn!
           </p>
           <p className="text-lg" style={{ color: '#9CA3AF' }}>
-            The page you're looking for doesn't exist or has been moved.
+            The page you're looking for doesn't exist or bad URL please re-consider.
           </p>
         </div>
 
