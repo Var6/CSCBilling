@@ -61,16 +61,18 @@ export interface IDriver {
 }
 export interface ICustomer {
     id?: mongoose.Types.ObjectId;
+  companyId?: mongoose.Types.ObjectId;  // tenant — set for self-signup via public site
   name: string;
   phone: string;
-  email: string;
+  email?: string;
+  passwordHash?: string;                  // present when customer self-registered with a password
   status: 'active' | 'inactive' | 'banned';
-  
+
   memberId?: string; // optional
   idProof?: string;  // optional (Aadhaar, PAN, Voter ID URL/number)
   feedback?: string; // optional user feedback
 
-  address: string;
+  address?: string;
   joinDate: Date;
   trips: mongoose.Types.ObjectId[];
   totalRides: number;

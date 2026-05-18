@@ -15,16 +15,20 @@ const TripSchema = new Schema(
       phone: { type: String, required: true },
     },
 
+    // Driver / vehicle / odometer.start are *unset* while the trip is still
+    // "pending" (customer booked but staff hasn't dispatched yet). The pre-validate
+    // hook below enforces that they become required as soon as the trip moves to
+    // ongoing or completed.
     driver: {
-      driverId: { type: Schema.Types.ObjectId, ref: "Driver", required: true },
-      name: { type: String, required: true },
-      phone: { type: String, required: true },
+      driverId: { type: Schema.Types.ObjectId, ref: "Driver" },
+      name: { type: String },
+      phone: { type: String },
     },
 
     vehicle: {
-      vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle", required: true },
-      plate: { type: String, required: true },
-      model: { type: String, required: true },
+      vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
+      plate: { type: String },
+      model: { type: String },
       company: { type: String, default: "" },
     },
 
@@ -40,7 +44,7 @@ const TripSchema = new Schema(
     },
 
     odometer: {
-      start: { type: Number, required: true },
+      start: { type: Number },
       end: Number,
       totalKm: Number,
     },
@@ -82,12 +86,30 @@ const TripSchema = new Schema(
   { timestamps: true }
 );
 
-/* ---------- Auto Trip Number (TS FIXED) ---------- */
-/* ---------- Auto Trip Number (Mongoose v7) ---------- */
+/* ---------- Pre-save (Mongoose v7): auto trip number + dispatch guard ---------- */
 TripSchema.pre("save", async function () {
   if (!this.tripNumber) {
     const count = await mongoose.model("Trip").countDocuments();
     this.tripNumber = `TRIP-${String(count + 1).padStart(6, "0")}`;
+  }
+
+  // Enforce dispatch fields once the trip moves out of `pending`.
+  const dispatched = this.status === "ongoing" || this.status === "completed";
+  if (dispatched) {
+    const missing: string[] = [];
+    if (!this.driver?.driverId)   missing.push("driver.driverId");
+    if (!this.driver?.name)       missing.push("driver.name");
+    if (!this.driver?.phone)      missing.push("driver.phone");
+    if (!this.vehicle?.vehicleId) missing.push("vehicle.vehicleId");
+    if (!this.vehicle?.plate)     missing.push("vehicle.plate");
+    if (!this.vehicle?.model)     missing.push("vehicle.model");
+    if (this.odometer?.start == null) missing.push("odometer.start");
+
+    if (missing.length) {
+      throw new Error(
+        `Trip cannot be ${this.status} without dispatch info — missing: ${missing.join(", ")}`
+      );
+    }
   }
 });
 
