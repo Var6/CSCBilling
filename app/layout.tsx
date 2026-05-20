@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TripEase",
-  description: "Rishabh App",
+  title: "CSC",
+  description: "CSC",
+  icons: { icon: "/logo2.png" },
 };
 
 export default function RootLayout({

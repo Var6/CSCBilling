@@ -7,7 +7,7 @@ export default function DashboardPreviewSection() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            See TripEase In Action
+            See CSC In Action
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             A glimpse into your future dashboard with real-time insights
@@ -21,7 +21,7 @@ export default function DashboardPreviewSection() {
               <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
               <div className="w-3 h-3 rounded-full bg-green-400"></div>
             </div>
-            <div className="text-white text-sm font-medium">TripEase Dashboard</div>
+            <div className="text-white text-sm font-medium">CSC Dashboard</div>
             <div className="w-20"></div>
           </div>
 

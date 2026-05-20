@@ -22,10 +22,8 @@ const Footer = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
           <div className="lg:col-span-4">
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#2563EB] to-[#1E40AF] rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
-                <Car className="text-white w-6 h-6" />
-              </div>
-              <span className="text-[26px] font-bold text-[#1A2332] tracking-tight">TripEase</span>
+              <img src="/logo2.png" alt="CSC" className="w-10 h-10 rounded-lg object-contain" />
+              <span className="text-[26px] font-bold text-[#1A2332] tracking-tight">CSC</span>
             </div>
             <p className="text-[#5A6C7D] text-lg leading-relaxed mb-8 max-w-sm">
               The complete operating system for modern transport businesses. Streamlining dispatch, billing, and fleet management.
@@ -97,7 +95,7 @@ const Footer = () => {
             </div>
             <div>
               <p className="text-xs text-[#9CA3AF] uppercase font-bold tracking-tighter">Email Support</p>
-              <p className="text-[#1A2332] font-semibold">ops@tripease.com</p>
+              <p className="text-[#1A2332] font-semibold">ops@csc.com</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -114,7 +112,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-[#9CA3AF] text-sm">
-            &copy; 2026 TripEase Technologies. All rights reserved. Built for the future of logistics.
+            &copy; 2026 CSC Technologies. All rights reserved. Built for the future of logistics.
           </p>
           <div className="flex items-center gap-8 text-sm font-medium text-[#5A6C7D]">
             <a href="#" className="hover:text-[#2563EB]">Privacy Policy</a>

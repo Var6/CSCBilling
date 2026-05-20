@@ -81,6 +81,10 @@ const TripSchema = new Schema(
       default: "pending",
     },
 
+    // 4-digit handoff code so the driver can confirm the rider at pickup.
+    // Generated when a customer books via the public site/mobile app.
+    otp: { type: String },
+
     notes: String,
   },
   { timestamps: true }

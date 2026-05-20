@@ -1,4 +1,4 @@
-import TripEaseNavbar from "@/components/ui/navbar";
+import CSCNavbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
 export default function PublicLayout({
@@ -8,7 +8,7 @@ export default function PublicLayout({
 }) {
   return (
     <>
-      <TripEaseNavbar />
+      <CSCNavbar />
       <main>{children}</main>
       <Footer />
     </>
