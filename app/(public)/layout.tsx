@@ -1,4 +1,4 @@
-import CSCNavbar from "@/components/ui/navbar";
+import CSCTravelsNavbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 
 export default function PublicLayout({
@@ -8,7 +8,7 @@ export default function PublicLayout({
 }) {
   return (
     <>
-      <CSCNavbar />
+      <CSCTravelsNavbar />
       <main>{children}</main>
       <Footer />
     </>

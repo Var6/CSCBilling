@@ -399,7 +399,7 @@ export default function DriversPage() {
                 {[
                   { label: 'Full Name *', key: 'name', type: 'text', placeholder: 'John Doe' },
                   { label: 'Phone Number *', key: 'phone', type: 'tel', placeholder: '+91 98765 43210' },
-                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'driver@csc.com' },
+                  { label: 'Email *', key: 'email', type: 'email', placeholder: 'driver@csctravels.com' },
                   { label: 'License Number *', key: 'license', type: 'text', placeholder: 'DL-12345678' },
                   { label: 'Assigned Vehicle', key: 'vehicle', type: 'text', placeholder: 'Toyota Camry - ABC123' },
                   { label: 'Address', key: 'address', type: 'text', placeholder: '123 Street, City' },

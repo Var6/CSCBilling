@@ -67,8 +67,8 @@ const handleSubmit = async () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="/logo2.png" alt="CSC" className="inline-block w-16 h-16 rounded-2xl mb-4 object-contain" />
-            <h1 className="text-4xl font-bold mb-2" style={{ color: '#1A2332' }}>CSC</h1>
+            <img src="/logo2.png" alt="csctravels" className="inline-block w-16 h-16 rounded-2xl mb-4 object-contain" />
+            <h1 className="text-4xl font-bold mb-2" style={{ color: '#1A2332' }}>csctravels</h1>
             <p className="text-lg" style={{ color: '#5A6C7D' }}>Admin Portal</p>
           </div>
 
@@ -98,7 +98,7 @@ const handleSubmit = async () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="admin@csc.com"
+                  placeholder="admin@csctravels.com"
                   className="w-full px-4 py-3 rounded-lg text-base transition-all"
                   style={{
                     border: '1px solid #E5E7EB',
@@ -163,7 +163,7 @@ const handleSubmit = async () => {
           </div>
 
           <p className="text-center mt-6 text-sm" style={{ color: '#9CA3AF' }}>
-            © 2024 CSC. All rights reserved.
+            © 2024 csctravels. All rights reserved.
           </p>
         </div>
       </div>
@@ -175,7 +175,7 @@ const handleSubmit = async () => {
           </div>
           <h3 className="text-3xl font-bold mb-4">Manage Your Fleet</h3>
           <p className="text-lg text-blue-100">
-            Streamline operations, track trips in real-time, and grow your cab business with CSC.
+            Streamline operations, track trips in real-time, and grow your cab business with csctravels.
           </p>
         </div>
       </div>

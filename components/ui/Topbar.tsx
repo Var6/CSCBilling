@@ -9,8 +9,8 @@ export default function Topbar({ sidebarOpen, setSidebarOpen, user }: { sidebarO
           <Menu className="w-6 h-6" style={{ color: '#5A6C7D' }} />
         </button>
         <div className="flex items-center gap-2">
-          <img src="/logo2.png" alt="CSC" className="w-10 h-10 rounded-lg object-contain" />
-          <span className="text-xl font-bold" style={{ color: '#1A2332' }}>CSC</span>
+          <img src="/logo2.png" alt="csctravels" className="w-10 h-10 rounded-lg object-contain" />
+          <span className="text-xl font-bold" style={{ color: '#1A2332' }}>csctravels</span>
         </div>
         <div className="flex-1 max-w-xl mx-8">
           <div className="relative">

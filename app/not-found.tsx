@@ -201,8 +201,8 @@ export default function NotFound() {
         <div className="mt-12 text-center">
           <p className="text-sm" style={{ color: '#9CA3AF' }}>
             Need help? Contact support at{' '}
-            <a href="mailto:support@cscbilling.com" className="font-medium hover:underline" style={{ color: '#2563EB' }}>
-              support@cscbilling.com
+            <a href="mailto:support@csctravels.com" className="font-medium hover:underline" style={{ color: '#2563EB' }}>
+              support@csctravels.com
             </a>
           </p>
         </div>

@@ -81,7 +81,7 @@ export function TripInvoice({ data }: { data: InvoiceData }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ color: '#fff', fontSize: '22px', fontWeight: 'bold', margin: 0 }}>
-              {data.company?.name || 'CSC TRAVELS SERVICES PVT. LTD.'}
+              {data.company?.name || 'csctravels'}
             </h1>
             {data.company?.address && (
               <p style={{ color: '#BFDBFE', fontSize: '11px', margin: '4px 0 0' }}>
@@ -339,7 +339,7 @@ export function TripInvoice({ data }: { data: InvoiceData }) {
             <div style={{ height: '48px' }} />
             <div style={{ borderTop: '2px solid #1A2332', paddingTop: '6px' }}>
               <div style={{ fontWeight: '600', fontSize: '12px' }}>
-                For {data.company?.name || 'CSC Travels Services Pvt. Ltd.'}
+                For {data.company?.name || 'csctravels'}
               </div>
               <div style={{ fontSize: '11px', color: '#9CA3AF' }}>Authorised Signatory</div>
             </div>

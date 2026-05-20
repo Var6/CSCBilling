@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// Reads bookings from the Supabase project shared with the CSC Travel website and mobile apps.
+// Reads bookings from the Supabase project shared with the csctravels website and mobile apps.
 // Env vars (set in .env.local and Vercel):
 //   SUPABASE_URL              -> https://<ref>.supabase.co
 //   SUPABASE_SERVICE_ROLE_KEY -> service-role key (server-only)

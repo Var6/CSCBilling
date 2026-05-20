@@ -33,7 +33,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
             id: 'DRV001',
             name: 'John Doe',
             phone: '+1 (555) 123-4567',
-            email: 'john.doe@cscbilling.com',
+            email: 'john.doe@csctravels.com',
             licenseNumber: 'DL123456'
           },
           vehicle: {

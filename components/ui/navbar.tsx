@@ -28,9 +28,9 @@ function Navbar() {
           <div className="flex items-center">
             <div className="flex items-center space-x-2">
                 <Link href={'/'} className='flex item-center'>
-              <img src="/logo2.png" alt="CSC" className="w-10 h-10 rounded-lg object-contain" />
+              <img src="/logo2.png" alt="csctravels" className="w-10 h-10 rounded-lg object-contain" />
               <span className="text-2xl font-bold text-gray-900">
-                CSC
+                csctravels
               </span>
               </Link>
             </div>
