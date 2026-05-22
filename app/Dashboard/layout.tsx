@@ -15,18 +15,17 @@ interface User {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const user = useCurrentUser() as User | null; // cast to User | null
+  const { user, loading } = useCurrentUser() as { user: User | null; loading: boolean };
   const router = useRouter();
 
-  // Redirect to login if no user
+  // Redirect to login only after the session check completes
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       router.replace('/Auth/login');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  // Show loader while checking session
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen text-lg text-gray-500">
         Checking session...

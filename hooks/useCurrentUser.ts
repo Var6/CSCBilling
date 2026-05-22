@@ -2,14 +2,19 @@
 import { useState, useEffect } from 'react';
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<any | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = localStorage.getItem('user');
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1) Try localStorage first for instant UI
-    const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
-
-    // 2) Also verify server-side cookie session and refresh user info
     (async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
@@ -18,13 +23,20 @@ export function useCurrentUser() {
           if (data?.user) {
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
+          } else {
+            setUser(null);
+            localStorage.removeItem('user');
           }
+        } else if (res.status === 401) {
+          setUser(null);
+          localStorage.removeItem('user');
         }
-      } catch (e) {
-        // ignore
+      } catch {
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
 
-  return user;
+  return { user, loading };
 }
