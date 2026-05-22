@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import CompanyAdmin from '@/models/CompanyAdmin';
 import { verifyToken } from '@/lib/jwt';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
 
