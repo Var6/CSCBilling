@@ -364,7 +364,7 @@ const statusConfig = getStatusConfig(trip.status);
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span style={{ color: '#5A6C7D' }}>Trip Fare</span>
-                  <span className="font-semibold" style={{ color: '#1A2332' }}>${trip.fare.toFixed(2)}</span>
+                  <span className="font-semibold" style={{ color: '#1A2332' }}>₹{trip.fare.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: '#5A6C7D' }}>Payment Method</span>
@@ -372,7 +372,7 @@ const statusConfig = getStatusConfig(trip.status);
                 </div>
                 <div className="pt-3 border-t flex justify-between items-center" style={{ borderColor: '#2563EB' }}>
                   <span className="font-bold text-lg" style={{ color: '#1A2332' }}>Total Amount</span>
-                  <span className="font-bold text-2xl" style={{ color: '#2563EB' }}>${trip.fare.toFixed(2)}</span>
+                  <span className="font-bold text-2xl" style={{ color: '#2563EB' }}>₹{trip.fare.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

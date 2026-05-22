@@ -63,7 +63,7 @@ export default function HeroSection() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
                     <div className="text-sm text-blue-600 font-medium">Total Revenue</div>
-                    <div className="text-2xl font-bold text-blue-900 mt-1">$45,231</div>
+                    <div className="text-2xl font-bold text-blue-900 mt-1">₹4,52,310</div>
                     <div className="text-xs text-blue-600 mt-1">+12.5% this month</div>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl">

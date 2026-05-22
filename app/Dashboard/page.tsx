@@ -7,13 +7,13 @@ import Link from 'next/link';
 export default function Dashboard() {
 
   const revenueData = [
-    { day: 'Mon', revenue: 4200 },
-    { day: 'Tue', revenue: 3800 },
-    { day: 'Wed', revenue: 5100 },
-    { day: 'Thu', revenue: 4600 },
-    { day: 'Fri', revenue: 6200 },
-    { day: 'Sat', revenue: 7400 },
-    { day: 'Sun', revenue: 6800 }
+    { day: 'Mon', revenue: 42000 },
+    { day: 'Tue', revenue: 38000 },
+    { day: 'Wed', revenue: 51000 },
+    { day: 'Thu', revenue: 46000 },
+    { day: 'Fri', revenue: 62000 },
+    { day: 'Sat', revenue: 74000 },
+    { day: 'Sun', revenue: 68000 }
   ];
 
   const tripsData = [
@@ -27,18 +27,18 @@ export default function Dashboard() {
   ];
 
   const recentTrips = [
-    { id: 'TRP-2401', customer: 'John Smith', driver: 'Mike Johnson', from: 'Airport', to: 'Downtown', status: 'completed', amount: 45 },
-    { id: 'TRP-2402', customer: 'Sarah Williams', driver: 'David Brown', from: 'Hotel Plaza', to: 'Mall', status: 'ongoing', amount: 28 },
-    { id: 'TRP-2403', customer: 'Robert Davis', driver: 'Chris Wilson', from: 'Station', to: 'Office Park', status: 'completed', amount: 35 },
-    { id: 'TRP-2404', customer: 'Emily Jones', driver: 'James Taylor', from: 'Residence', to: 'Airport', status: 'pending', amount: 52 },
-    { id: 'TRP-2405', customer: 'Michael Brown', driver: 'Tom Anderson', from: 'Downtown', to: 'Stadium', status: 'completed', amount: 38 }
+    { id: 'TRP-2401', customer: 'Rahul Sharma', driver: 'Mahesh Kumar', from: 'IGI Airport T3', to: 'Connaught Place', status: 'completed', amount: 1450 },
+    { id: 'TRP-2402', customer: 'Priya Verma', driver: 'Suresh Singh', from: 'Hotel Taj', to: 'Select Citywalk Mall', status: 'ongoing', amount: 680 },
+    { id: 'TRP-2403', customer: 'Amit Patel', driver: 'Ravi Yadav', from: 'New Delhi Station', to: 'Cyber Hub Gurgaon', status: 'completed', amount: 1250 },
+    { id: 'TRP-2404', customer: 'Sneha Iyer', driver: 'Vikram Joshi', from: 'Vasant Kunj', to: 'IGI Airport T1', status: 'pending', amount: 1820 },
+    { id: 'TRP-2405', customer: 'Karan Mehta', driver: 'Deepak Reddy', from: 'Saket', to: 'Noida Sector 18', status: 'completed', amount: 980 }
   ];
 
   const kpis = [
     { label: 'Total Trips Today', value: '68', change: '+12%', icon: MapPin, color: '#2563EB', bgColor: '#DBEAFE' },
     { label: 'Active Drivers', value: '42', change: '+5%', icon: Users, color: '#10B981', bgColor: '#D1FAE5' },
     { label: 'Vehicles Available', value: '38', change: '-3%', icon: Car, color: '#F59E0B', bgColor: '#FEF3C7' },
-    { label: "Today's Revenue", value: '$6,820', change: '+18%', icon: DollarSign, color: '#8B5CF6', bgColor: '#EDE9FE' }
+    { label: "Today's Revenue", value: '₹68,200', change: '+18%', icon: DollarSign, color: '#8B5CF6', bgColor: '#EDE9FE' }
   ];
 
   return (
@@ -70,7 +70,7 @@ export default function Dashboard() {
             <AlertCircle className="w-5 h-5" style={{ color: '#F59E0B' }} />
             <span className="font-semibold" style={{ color: '#1A2332' }}>Pending Payments</span>
           </div>
-          <p style={{ color: '#5A6C7D' }}>You have <span className="font-bold" style={{ color: '#F59E0B' }}>12 pending payments</span> totaling <span className="font-bold" style={{ color: '#F59E0B' }}>$1,840</span></p>
+          <p style={{ color: '#5A6C7D' }}>You have <span className="font-bold" style={{ color: '#F59E0B' }}>12 pending payments</span> totaling <span className="font-bold" style={{ color: '#F59E0B' }}>₹18,400</span></p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -133,7 +133,7 @@ export default function Dashboard() {
                         {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-semibold" style={{ color: '#1A2332' }}>${trip.amount}</td>
+                    <td className="px-6 py-4 font-semibold" style={{ color: '#1A2332' }}>₹{trip.amount.toLocaleString('en-IN')}</td>
                   </tr>
                 ))}
               </tbody>

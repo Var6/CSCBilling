@@ -199,7 +199,7 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
               <div>
                 <p className="text-sm mb-1" style={{ color: '#5A6C7D' }}>Amount</p>
                 <p className={`text-2xl font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                  {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                  {transaction.type === 'income' ? '+' : '-'}₹{transaction.amount.toLocaleString('en-IN')}
                 </p>
               </div>
               
@@ -240,23 +240,23 @@ export default function PaymentDetailPage({ params }: { params: { id: string } }
               <div className="space-y-3">
                 <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <span style={{ color: '#5A6C7D' }}>Base Fare</span>
-                  <span className="font-medium" style={{ color: '#1A2332' }}>${transaction.breakdown.baseFare.toFixed(2)}</span>
+                  <span className="font-medium" style={{ color: '#1A2332' }}>₹{transaction.breakdown.baseFare.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <span style={{ color: '#5A6C7D' }}>Tip</span>
-                  <span className="font-medium" style={{ color: '#1A2332' }}>${transaction.breakdown.tip.toFixed(2)}</span>
+                  <span className="font-medium" style={{ color: '#1A2332' }}>₹{transaction.breakdown.tip.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <span style={{ color: '#5A6C7D' }}>Tax</span>
-                  <span className="font-medium" style={{ color: '#1A2332' }}>${transaction.breakdown.tax.toFixed(2)}</span>
+                  <span className="font-medium" style={{ color: '#1A2332' }}>₹{transaction.breakdown.tax.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex items-center justify-between py-3" style={{ borderBottom: '1px solid #F3F4F6' }}>
                   <span style={{ color: '#5A6C7D' }}>Service Fee</span>
-                  <span className="font-medium" style={{ color: '#1A2332' }}>${transaction.breakdown.serviceFee.toFixed(2)}</span>
+                  <span className="font-medium" style={{ color: '#1A2332' }}>₹{transaction.breakdown.serviceFee.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex items-center justify-between py-4 mt-2" style={{ borderTop: '2px solid #E5E7EB' }}>
                   <span className="text-lg font-bold" style={{ color: '#1A2332' }}>Total</span>
-                  <span className="text-2xl font-bold" style={{ color: '#2563EB' }}>${transaction.breakdown.total.toFixed(2)}</span>
+                  <span className="text-2xl font-bold" style={{ color: '#2563EB' }}>₹{transaction.breakdown.total.toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>

@@ -252,7 +252,7 @@ const displayedTrips = trips
                         </span>
                       </td>
                       <td className="px-6 py-4 font-semibold" style={{ color: '#1A2332' }}>
-                        ${trip.fare.toFixed(2)}
+                        ₹{trip.fare.toLocaleString('en-IN')}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">

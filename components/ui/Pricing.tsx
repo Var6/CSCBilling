@@ -9,8 +9,8 @@ export default function PricingSection() {
     {
       name: "Starter",
       description: "Perfect for small cab operators",
-      monthlyPrice: 29,
-      annualPrice: 290,
+      monthlyPrice: 2499,
+      annualPrice: 24990,
       features: [
         "Up to 5 vehicles",
         "Up to 10 drivers",
@@ -24,8 +24,8 @@ export default function PricingSection() {
     {
       name: "Professional",
       description: "For growing travel agencies",
-      monthlyPrice: 79,
-      annualPrice: 790,
+      monthlyPrice: 6999,
+      annualPrice: 69990,
       features: [
         "Up to 25 vehicles",
         "Up to 50 drivers",
@@ -41,8 +41,8 @@ export default function PricingSection() {
     {
       name: "Enterprise",
       description: "For large fleet operations",
-      monthlyPrice: 199,
-      annualPrice: 1990,
+      monthlyPrice: 19999,
+      annualPrice: 199990,
       features: [
         "Unlimited vehicles",
         "Unlimited drivers",
@@ -125,7 +125,7 @@ export default function PricingSection() {
                 <div className="mb-6">
                   <div className="flex items-baseline">
                     <span className="text-5xl font-bold text-gray-900">
-                      ${isAnnual ? plan.annualPrice : plan.monthlyPrice}
+                      ₹{(isAnnual ? plan.annualPrice : plan.monthlyPrice).toLocaleString('en-IN')}
                     </span>
                     <span className="text-gray-600 ml-2">
                       /{isAnnual ? 'year' : 'month'}
@@ -133,7 +133,7 @@ export default function PricingSection() {
                   </div>
                   {isAnnual && (
                     <p className="text-sm text-green-600 mt-1">
-                      Save ${(plan.monthlyPrice * 12 - plan.annualPrice)}
+                      Save ₹{(plan.monthlyPrice * 12 - plan.annualPrice).toLocaleString('en-IN')}
                     </p>
                   )}
                 </div>

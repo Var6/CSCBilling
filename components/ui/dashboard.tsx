@@ -47,7 +47,7 @@ export default function DashboardPreviewSection() {
                   <span className="text-green-600 text-sm font-semibold">+12.5%</span>
                 </div>
                 <div className="text-gray-600 text-sm mb-1">Total Revenue</div>
-                <div className="text-3xl font-bold text-gray-900">$45,231</div>
+                <div className="text-3xl font-bold text-gray-900">₹4,52,310</div>
               </div>
 
               <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
