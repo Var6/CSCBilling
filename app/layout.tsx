@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "csctravels",
-  description: "csctravels",
+  title: "CSCTravels",
+  description: "CSCTravels - Your Trusted Travel Partner",
   icons: { icon: "/logo2.png" },
 };
 
