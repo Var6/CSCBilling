@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET!
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 
 export function signToken(payload: any) {
   return jwt.sign(payload, JWT_SECRET, {
