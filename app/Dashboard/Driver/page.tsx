@@ -71,7 +71,8 @@ export default function DriversPage() {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch('/api/driver');
+      // Both current and former — this page is where employment is managed.
+      const res = await fetch('/api/driver?active=all');
       if (!res.ok) throw new Error('Failed to fetch drivers');
       const data = await res.json();
       setDrivers(data);
@@ -269,6 +270,9 @@ export default function DriversPage() {
     else alert((await res.json()).error ?? 'Could not reinstate this driver');
   };
 
+  const currentCount = drivers.filter((d) => d.active !== false).length;
+  const formerCount = drivers.filter((d) => d.active === false).length;
+
   const statusCounts = {
     all: drivers.length,
     available: drivers.filter(d => d.status === 'available').length,
@@ -344,16 +348,37 @@ export default function DriversPage() {
               <option value="on-trip">On Trip</option>
               <option value="offline">Offline</option>
             </select>
-            <select
-              value={employment}
-              onChange={(e) => setEmployment(e.target.value as 'current' | 'former' | 'all')}
-              className="px-4 py-3 rounded-lg"
-              style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
-            >
-              <option value="current">Current drivers</option>
-              <option value="former">Former drivers</option>
-              <option value="all">Everyone</option>
-            </select>
+          </div>
+
+          {/*
+            Former drivers live behind their own tab rather than mixed into the
+            list. Someone who has left should not be sitting next to the roster
+            you assign work from — that is how a departed driver ends up booked
+            onto a duty.
+          */}
+          <div className="flex gap-1 mt-4 p-1 rounded-lg w-fit" style={{ backgroundColor: '#F1F5F9' }}>
+            {([
+              ['current', 'Current', currentCount],
+              ['former', 'Former', formerCount],
+              ['all', 'Everyone', drivers.length],
+            ] as const).map(([key, label, count]) => (
+              <button
+                key={key}
+                onClick={() => setEmployment(key)}
+                className="px-4 py-2 rounded-md text-sm font-medium transition-all"
+                style={
+                  employment === key
+                    ? { backgroundColor: '#FFFFFF', color: '#1A2332', boxShadow: '0 1px 2px rgba(0,0,0,0.08)' }
+                    : { color: '#5A6C7D' }
+                }
+              >
+                {label}
+                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: employment === key ? '#EFF6FF' : '#E2E8F0', color: '#5A6C7D' }}>
+                  {count}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
