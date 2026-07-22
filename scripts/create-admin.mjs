@@ -1,7 +1,11 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-const MONGODB_URI = 'mongodb+srv://Jaivik:rishabh@cluster0.9kgmqd4.mongodb.net/';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('✗ Set MONGODB_URI in the environment before running this script.');
+  process.exit(1);
+}
 
 // CompanyAdmin Schema
 const companyAdminSchema = new mongoose.Schema(
