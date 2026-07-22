@@ -15,11 +15,19 @@
 
 const encoder = new TextEncoder();
 
-/** base64url → Uint8Array, tolerating missing padding. */
-function fromBase64Url(input: string): Uint8Array {
+/**
+ * base64url → bytes, tolerating missing padding.
+ *
+ * The return type is pinned to `Uint8Array<ArrayBuffer>` rather than a bare
+ * `Uint8Array`. Under TypeScript 5.7+ the latter widens to
+ * `Uint8Array<ArrayBufferLike>`, which includes SharedArrayBuffer and so is not
+ * assignable to the `BufferSource` that crypto.subtle.verify expects. Allocating
+ * the ArrayBuffer explicitly keeps the narrower type all the way through.
+ */
+function fromBase64Url(input: string): Uint8Array<ArrayBuffer> {
   const padded = input.replace(/-/g, '+').replace(/_/g, '/');
   const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
 }
