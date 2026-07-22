@@ -37,12 +37,17 @@ const vehicleSchema = new Schema<IVehicle>({
 
 
   // Documents
+  // Document expiries are nullable on purpose. Vehicles carried over from the
+  // paper books have no recorded insurance, pollution or fitness dates, and
+  // making these required meant those rows could not be saved at all — the UI
+  // could not even be used to fill them in. The console shows "not recorded"
+  // and prompts staff instead.
   insurance: { type: String, default: '' },
-  insuranceExpiry: { type: Date, required: true },
+  insuranceExpiry: { type: Date, default: null },
   pollution: { type: String, default: '' },
-  pollutionExpiry: { type: Date, required: true },
+  pollutionExpiry: { type: Date, default: null },
   fitness: { type: String, default: '' },
-  fitnessExpiry: { type: Date, required: true },
+  fitnessExpiry: { type: Date, default: null },
   rcNumber: { type: String, required: true },
   
   // Driver Assignment

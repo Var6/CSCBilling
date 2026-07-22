@@ -48,6 +48,23 @@ interface Driver {
   status: 'available' | 'on-trip' | 'offline';
 }
 
+/*
+ * Vehicles carried over from the paper books have no assigned driver, no
+ * document expiries and no maintenance history. Reading those straight threw
+ * during render and took the page down with a client-side exception, so every
+ * access below tolerates a missing value.
+ */
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+const initials = (name?: string | null) =>
+  (name ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
+
 export default function VehicleDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -120,15 +137,20 @@ export default function VehicleDetailPage() {
     }
   };
 
-  const getDaysUntilExpiry = (expiryDate: string) => {
-    const today = new Date();
+  /*
+   * Null means the date was never recorded, which is different from expired.
+   * `new Date(null)` is the epoch, so the previous version reported every
+   * vehicle carried over from the paper books as having expired insurance.
+   */
+  const getDaysUntilExpiry = (expiryDate?: string | Date | null): number | null => {
+    if (!expiryDate) return null;
     const expiry = new Date(expiryDate);
-    const diffTime = expiry.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    if (Number.isNaN(expiry.getTime())) return null;
+    return Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryStatus = (days: number) => {
+  const getExpiryStatus = (days: number | null) => {
+    if (days === null) return { color: '#9CA3AF', text: 'Not recorded', icon: AlertTriangle };
     if (days < 0) return { color: '#EF4444', text: 'Expired', icon: AlertTriangle };
     if (days <= 30) return { color: '#F59E0B', text: `${days} days left`, icon: AlertTriangle };
     return { color: '#10B981', text: 'Valid', icon: CheckCircle };
@@ -370,9 +392,9 @@ export default function VehicleDetailPage() {
                       </button>
                     </div>
 
-                    {vehicle.maintenanceRecords && vehicle.maintenanceRecords.length > 0 ? (
+                    {(vehicle.maintenanceRecords?.length ?? 0) > 0 ? (
                       <div className="space-y-3">
-                        {vehicle.maintenanceRecords.map((record, idx) => (
+                        {(vehicle.maintenanceRecords ?? []).map((record, idx) => (
                           <div key={idx} className="p-4 rounded-lg" style={{ border: '1px solid #E5E7EB' }}>
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-3">
@@ -430,15 +452,15 @@ export default function VehicleDetailPage() {
                           </div>
                           <div className="flex items-center justify-between text-sm">
                             <span style={{ color: '#5A6C7D' }}>
-                              Expiry: {new Date(doc.expiry).toLocaleDateString()}
+                              Expiry: {doc.expiry ? new Date(doc.expiry).toLocaleDateString('en-IN') : 'not recorded'}
                             </span>
-                            {daysLeft <= 30 && daysLeft > 0 && (
+                            {daysLeft !== null && daysLeft <= 30 && daysLeft > 0 && (
                               <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
                                 <Bell className="w-3 h-3" />
                                 Renewal Required
                               </div>
                             )}
-                            {daysLeft < 0 && (
+                            {daysLeft !== null && daysLeft < 0 && (
                               <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
                                 <AlertTriangle className="w-3 h-3" />
                                 Expired
@@ -465,7 +487,7 @@ export default function VehicleDetailPage() {
                   <div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                        {vehicle.assignedDriverName.split(' ').map(n => n[0]).join('')}
+                        {initials(vehicle.assignedDriverName)}
                       </div>
                       <div>
                         <p className="font-bold" style={{ color: '#1A2332' }}>{vehicle.assignedDriverName}</p>
@@ -535,8 +557,12 @@ export default function VehicleDetailPage() {
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
               <h3 className="text-lg font-bold mb-4" style={{ color: '#1A2332' }}>Quick Alerts</h3>
               <div className="space-y-3">
-                {documents.filter(doc => getDaysUntilExpiry(doc.expiry) <= 30).map((doc, idx) => {
-                  const daysLeft = getDaysUntilExpiry(doc.expiry);
+                {documents.filter(doc => {
+                  const d = getDaysUntilExpiry(doc.expiry);
+                  return d !== null && d <= 30;
+                }).map((doc, idx) => {
+                  // Non-null here: the filter above already dropped undated docs.
+                  const daysLeft = getDaysUntilExpiry(doc.expiry) ?? 0;
                   return (
                     <div key={idx} className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: daysLeft < 0 ? '#FEE2E2' : '#FEF3C7' }}>
                       <Bell className="w-4 h-4 mt-0.5" style={{ color: daysLeft < 0 ? '#DC2626' : '#D97706' }} />
@@ -548,10 +574,17 @@ export default function VehicleDetailPage() {
                     </div>
                   );
                 })}
-                {documents.filter(doc => getDaysUntilExpiry(doc.expiry) <= 30).length === 0 && (
+                {documents.filter(doc => {
+                  const d = getDaysUntilExpiry(doc.expiry);
+                  return d !== null && d <= 30;
+                }).length === 0 && (
                   <div className="text-center py-4">
                     <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: '#10B981' }} />
-                    <p className="text-sm" style={{ color: '#5A6C7D' }}>All documents are valid</p>
+                    <p className="text-sm" style={{ color: '#5A6C7D' }}>
+                      {documents.every(d => !d.expiry)
+                        ? 'No document dates recorded yet'
+                        : 'All documents are valid'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -683,7 +716,7 @@ export default function VehicleDetailPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                          {driver.name.split(' ').map(n => n[0]).join('')}
+                          {initials(driver.name)}
                         </div>
                         <div className="flex-1">
                           <p className="font-bold" style={{ color: '#1A2332' }}>{driver.name}</p>
@@ -692,7 +725,7 @@ export default function VehicleDetailPage() {
                         <div className="text-right">
                           <div className="flex items-center gap-1 mb-1">
                             <Star className="w-4 h-4 fill-yellow-400" style={{ color: '#FBBF24' }} />
-                            <span className="text-sm font-medium" style={{ color: '#1A2332' }}>{driver.rating.toFixed(1)}</span>
+                            <span className="text-sm font-medium" style={{ color: '#1A2332' }}>{num(driver.rating).toFixed(1)}</span>
                           </div>
                           <p className="text-xs" style={{ color: '#9CA3AF' }}>{driver.trips} trips</p>
                         </div>

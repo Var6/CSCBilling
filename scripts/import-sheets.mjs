@@ -129,6 +129,13 @@ async function ensureDrivers(names, companyId, stats) {
 
     // Placeholder contact details — the books record no phone, licence or
     // email. These rows are flagged `needsProfile` for staff to complete.
+    /*
+     * Every field the console reads must be present, not just the ones the
+     * books supply. The loose schema this script uses bypasses the real model's
+     * defaults, so a partial document here reaches the UI as `undefined` — and
+     * `driver.rating.toFixed(1)` on the detail page took the whole page down
+     * with a client-side exception.
+     */
     const doc = await Driver.create({
       name,
       aliases: [name],
@@ -137,8 +144,20 @@ async function ensureDrivers(names, companyId, stats) {
       license: '',
       company: '',
       status: 'offline',
+      vehicle: null,
+      vehicleId: null,
+      joinDate: new Date(),
+      rating: 0,
+      trips: 0,
+      address: '',
+      bloodGroup: '',
+      emergencyContact: '',
+      baseSalary: 0,
+      perKmRate: 0,
       active: true,
+      exitDate: null,
       currentBalance: 0,
+      onDuty: false,
       needsProfile: true,
       companyId,
     });
@@ -172,6 +191,20 @@ async function ensureVehicles(codes, companyId, stats) {
         rcNumber: `PENDING-${code}`,
         year: new Date().getFullYear(),
         status: 'available',
+        color: '',
+        mileage: '0 km',
+        insurance: '',
+        insuranceExpiry: null,
+        pollution: '',
+        pollutionExpiry: null,
+        fitness: '',
+        fitnessExpiry: null,
+        assignedDriverId: null,
+        assignedDriverName: null,
+        totalEarnings: 0,
+        monthlyEarnings: 0,
+        totalTrips: 0,
+        maintenanceRecords: [],
         needsProfile: true,
         companyId,
       });

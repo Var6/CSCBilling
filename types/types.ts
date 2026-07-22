@@ -21,11 +21,11 @@ export interface IVehicle {
   
   // Documents
   insurance: string;
-  insuranceExpiry: Date;
+  insuranceExpiry: Date | null;
   pollution: string;
-  pollutionExpiry: Date;
+  pollutionExpiry: Date | null;
   fitness: string;
-  fitnessExpiry: Date;
+  fitnessExpiry: Date | null;
   rcNumber: string;
   company:string;
   

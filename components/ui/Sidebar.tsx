@@ -17,6 +17,7 @@ import {
   BookOpen,
   Fuel,
   Wrench,
+  Lightbulb,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,6 +38,7 @@ const menuItems = [
   { label: 'Finance', href: '/Dashboard/Finance', icon: DollarSign },
   { label: 'Salary', href: '/Dashboard/Salary', icon: Wallet },
   { label: 'Payments', href: '/Dashboard/Payments', icon: MapPin },
+  { label: 'Suggestions', href: '/Dashboard/Suggestions', icon: Lightbulb },
   { label: 'Reports', href: '/Dashboard/Trip/Report', icon: BarChart2 },
 ];
 

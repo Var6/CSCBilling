@@ -51,6 +51,26 @@ interface Vehicle {
   status: 'available' | 'in-use' | 'maintenance';
 }
 
+/* ================= SAFE ACCESSORS ================= */
+
+/*
+ * Rows carried over from the paper books do not carry every field the console
+ * assumes — no rating, no trip count, no assigned driver. Reading them straight
+ * (`driver.rating.toFixed(1)`) threw a TypeError during render, which React
+ * surfaces as "a client-side exception has occurred" and takes down the whole
+ * page. Incomplete data is normal here, so it must never be fatal.
+ */
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+const initials = (name?: string | null) =>
+  (name ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
+
 /* ================= PAGE ================= */
 
 export default function DriverDetailPage() {
@@ -77,16 +97,6 @@ export default function DriverDetailPage() {
   const [activeTab, setActiveTab] =
     useState<'overview' | 'performance' | 'details'>('overview');
 
-  /* ================= DEBUG ================= */
-
-  useEffect(() => {
-    console.log('================ DEBUG =================');
-    console.log('RAW PARAMS:', params);
-    console.log('RESOLVED DRIVER ID:', driverId);
-    console.log('TYPE:', typeof driverId);
-    console.log('========================================');
-  }, [params, driverId]);
-
   /* ================= DATA FETCH ================= */
 
   useEffect(() => {
@@ -102,13 +112,9 @@ export default function DriverDetailPage() {
 
   const fetchDriver = async () => {
     try {
-      console.log('📡 Fetching driver:', driverId);
 
       const res = await fetch(`/api/driver/${driverId}`);
       const data = await res.json();
-
-      console.log('API STATUS:', res.status);
-      console.log('API DATA:', data);
 
       if (!res.ok) throw new Error(data?.error || 'Driver not found');
 
@@ -305,14 +311,14 @@ export default function DriverDetailPage() {
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
               <div className="flex items-start gap-6 mb-6">
                 <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                  {driver.name.split(' ').map(n => n[0]).join('')}
+                  {initials(driver.name)}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl font-bold" style={{ color: '#1A2332' }}>{driver.name}</h2>
                     <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} flex items-center gap-1`}>
                       <StatusIcon className="w-3 h-3" />
-                      {driver.status.replace('-', ' ').toUpperCase()}
+                      {(driver.status ?? 'offline').replace('-', ' ').toUpperCase()}
                     </span>
                   </div>
                   <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>License: <span className="font-bold" style={{ color: '#1A2332' }}>{driver.license}</span></p>
@@ -368,7 +374,7 @@ export default function DriverDetailPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {[
                         { label: 'Total Trips', value: driver.trips, icon: Car, color: '#2563EB' },
-                        { label: 'Rating', value: `⭐ ${driver.rating.toFixed(1)}`, icon: Star, color: '#F59E0B' },
+                        { label: 'Rating', value: `⭐ ${num(driver.rating).toFixed(1)}`, icon: Star, color: '#F59E0B' },
                         { label: 'Status', value: driver.status, icon: StatusIcon, color: statusStyle.dot }
                       ].map((stat, idx) => (
                         <div key={idx} className="p-4 rounded-lg" style={{ backgroundColor: '#F8F9FA' }}>
@@ -393,7 +399,7 @@ export default function DriverDetailPage() {
                       </div>
                       <div className="p-4 rounded-lg" style={{ border: '1px solid #E5E7EB' }}>
                         <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>Average Rating</p>
-                        <p className="text-3xl font-bold" style={{ color: '#F59E0B' }}>{driver.rating.toFixed(1)}</p>
+                        <p className="text-3xl font-bold" style={{ color: '#F59E0B' }}>{num(driver.rating).toFixed(1)}</p>
                       </div>
                     </div>
                   </div>
@@ -487,7 +493,7 @@ export default function DriverDetailPage() {
               <div className="space-y-4">
                 {[
                   { label: 'Total Trips', value: driver.trips, icon: Car, color: '#2563EB' },
-                  { label: 'Rating', value: driver.rating.toFixed(1), icon: Star, color: '#F59E0B' },
+                  { label: 'Rating', value: num(driver.rating).toFixed(1), icon: Star, color: '#F59E0B' },
                   { label: 'Status', value: driver.status.replace('-', ' '), icon: StatusIcon, color: statusStyle.dot }
                 ].map((stat, idx) => (
                   <div key={idx} className="flex items-center justify-between">
