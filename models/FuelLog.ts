@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models } from 'mongoose';
+import { amendmentFields } from '@/lib/amend';
 
 /**
  * A single fuel or CNG fill — the "CSC TRAVELS FUEL DETAILS" book.
@@ -62,6 +63,8 @@ const FuelLogSchema = new Schema(
       row: Number,
       col: Number,
     },
+
+    ...amendmentFields,
   },
   { timestamps: true, collection: 'fuellogs' },
 );

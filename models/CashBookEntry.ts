@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models } from 'mongoose';
+import { amendmentFields } from '@/lib/amend';
 
 /**
  * One day of the company cash book, per account — "CSC- Cash Book 2026-27.xlsx".
@@ -74,6 +75,8 @@ const CashBookEntrySchema = new Schema(
       sheet: String,
       row: Number,
     },
+
+    ...amendmentFields,
   },
   { timestamps: true, collection: 'cashbookentries' },
 );

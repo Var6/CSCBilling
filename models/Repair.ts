@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models } from 'mongoose';
+import { amendmentFields } from '@/lib/amend';
 
 /**
  * A workshop visit — servicing, a repair, or a part replacement.
@@ -81,6 +82,8 @@ const RepairSchema = new Schema(
       sheet: String,
       row: Number,
     },
+
+    ...amendmentFields,
   },
   { timestamps: true, collection: 'repairs' },
 );

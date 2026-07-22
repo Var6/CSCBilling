@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, RefreshCw, Fuel, Gauge, X, IndianRupee, Download } from 'lucide-react';
+import { Plus, RefreshCw, Fuel, Gauge, X, IndianRupee, Download, Pencil, Trash2 } from 'lucide-react';
 import { exportFuel } from '@/lib/bookExports';
 
 /**
@@ -27,6 +27,11 @@ type FuelLog = {
   kmSinceLast: number | null;
   mileage: number | null;
   origin: 'sheet' | 'app';
+  driverId?: string;
+  vehicleId?: string | null;
+  fuelType?: string;
+  notes?: string;
+  amended?: boolean;
 };
 
 type Driver = { _id: string; name: string };
@@ -56,6 +61,7 @@ export default function FuelPage() {
   const [month, setMonth] = useState(currentMonth());
   const [vehicleId, setVehicleId] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<FuelLog | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -85,6 +91,14 @@ export default function FuelPage() {
       .catch(() => setVehicles([]));
   }, []);
 
+  async function remove(row: FuelLog) {
+    if (!confirm(`Delete the ${row.driverName} fill on ${new Date(row.date).toLocaleDateString('en-IN')}?`)) return;
+    const res = await fetch(`/api/fuel/${row._id}`, { method: 'DELETE' });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(j.error ?? 'Could not delete'); return; }
+    load();
+  }
+
   const exportLabel = [
     month,
     vehicleId ? (vehicles.find((v) => v._id === vehicleId)?.shortCode ?? 'vehicle') : null,
@@ -107,7 +121,7 @@ export default function FuelPage() {
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
             <Download className="w-4 h-4" /> Export
           </button>
-          <button onClick={() => setShowForm(true)}
+          <button onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}>
             <Plus className="w-4 h-4" /> Add fill
@@ -154,7 +168,8 @@ export default function FuelPage() {
                 <th className="px-3 py-3 font-medium text-right">Rate</th>
                 <th className="px-3 py-3 font-medium text-right">Odometer</th>
                 <th className="px-3 py-3 font-medium text-right">Km run</th>
-                <th className="px-5 py-3 font-medium text-right">Mileage</th>
+                <th className="px-3 py-3 font-medium text-right">Mileage</th>
+                <th className="px-5 py-3 font-medium text-right">Edit</th>
               </tr>
             </thead>
             <tbody>
@@ -178,15 +193,25 @@ export default function FuelPage() {
                         : <span className="text-gray-300">—</span>}
                   </td>
                   <td className="px-3 py-3 text-right text-gray-600">{r.kmSinceLast ?? <span className="text-gray-300">—</span>}</td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-3 py-3 text-right">
                     {r.mileage
                       ? <span className="font-medium text-gray-900">{r.mileage} km</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
+                  <td className="px-5 py-3 text-right whitespace-nowrap">
+                    <button onClick={() => { setEditing(r); setShowForm(true); }}
+                      className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => remove(r)}
+                      className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={9} className="text-center py-16 text-gray-500">No fills recorded this month.</td></tr>
+                <tr><td colSpan={10} className="text-center py-16 text-gray-500">No fills recorded this month.</td></tr>
               )}
             </tbody>
           </table>
@@ -194,7 +219,7 @@ export default function FuelPage() {
       </div>
 
       {showForm && (
-        <FuelForm drivers={drivers} vehicles={vehicles}
+        <FuelForm entry={editing} drivers={drivers} vehicles={vehicles}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }} />
       )}
@@ -218,16 +243,23 @@ function Stat({ label, value, icon: Icon, hint }: {
 }
 
 function FuelForm({
-  drivers, vehicles, onClose, onSaved,
+  entry, drivers, vehicles, onClose, onSaved,
 }: {
-  drivers: Driver[]; vehicles: Vehicle[]; onClose: () => void; onSaved: () => void;
+  entry: FuelLog | null; drivers: Driver[]; vehicles: Vehicle[];
+  onClose: () => void; onSaved: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // An edit opens with what is already recorded, not a blank form.
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    driverId: '', vehicleId: '', amount: '', quantity: '',
-    meterReading: '', fuelType: 'cng', notes: '',
+    date: entry ? entry.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    driverId: entry?.driverId ?? '',
+    vehicleId: entry?.vehicleId ?? '',
+    amount: entry ? String(entry.amount) : '',
+    quantity: entry?.quantity ? String(entry.quantity) : '',
+    meterReading: entry?.meterReading != null ? String(entry.meterReading) : '',
+    fuelType: entry?.fuelType ?? 'cng',
+    notes: entry?.notes ?? '',
   });
 
   const rate = Number(form.quantity) > 0
@@ -239,8 +271,8 @@ function FuelForm({
     if (!form.driverId) { setError('Pick a driver'); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch('/api/fuel', {
-        method: 'POST',
+      const res = await fetch(entry ? `/api/fuel/${entry._id}` : '/api/fuel', {
+        method: entry ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
@@ -263,7 +295,7 @@ function FuelForm({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-lg">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="font-semibold text-gray-900">Add a fill</h2>
+          <h2 className="font-semibold text-gray-900">{entry ? 'Edit fill' : 'Add a fill'}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -330,7 +362,7 @@ function FuelForm({
             <button type="submit" disabled={saving}
               className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}>
-              {saving ? 'Saving…' : 'Save fill'}
+              {saving ? 'Saving…' : entry ? 'Save changes' : 'Save fill'}
             </button>
           </div>
         </form>

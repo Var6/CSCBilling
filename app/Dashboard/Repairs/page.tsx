@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, RefreshCw, Wrench, X, IndianRupee, CalendarClock, CheckCircle2, Download } from 'lucide-react';
+import { Plus, RefreshCw, Wrench, X, IndianRupee, CalendarClock, CheckCircle2, Download, Pencil, Trash2 } from 'lucide-react';
 import { exportRepairs } from '@/lib/bookExports';
 
 /**
@@ -65,6 +65,7 @@ export default function RepairsPage() {
   const [vehicleId, setVehicleId] = useState('');
   const [status, setStatus] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Repair | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -102,6 +103,14 @@ export default function RepairsPage() {
     else setError((await res.json()).error ?? 'Could not update');
   }
 
+  async function remove(row: Repair) {
+    if (!confirm(`Delete the ${row.category} job on ${new Date(row.date).toLocaleDateString('en-IN')}?`)) return;
+    const res = await fetch(`/api/repair/${row._id}`, { method: 'DELETE' });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(j.error ?? 'Could not delete'); return; }
+    load();
+  }
+
   const exportLabel = [
     vehicleId ? (vehicles.find((v) => v._id === vehicleId)?.shortCode ?? 'vehicle') : 'all',
     status || null,
@@ -126,7 +135,7 @@ export default function RepairsPage() {
             <Download className="w-4 h-4" /> Export
           </button>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}
           >
@@ -212,12 +221,22 @@ export default function RepairsPage() {
                       : r.nextDueOdometer ? `${r.nextDueOdometer.toLocaleString('en-IN')} km` : '—'}
                   </td>
                   <td className="px-5 py-3 text-right">
-                    {r.status !== 'completed' && r.status !== 'cancelled' && (
-                      <button onClick={() => complete(r._id)}
-                        className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> mark done
+                    <div className="flex items-center justify-end gap-1">
+                      {r.status !== 'completed' && r.status !== 'cancelled' && (
+                        <button onClick={() => complete(r._id)}
+                          className="inline-flex items-center gap-1 text-xs text-emerald-700 hover:underline mr-2">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> mark done
+                        </button>
+                      )}
+                      <button onClick={() => { setEditing(r); setShowForm(true); }}
+                        className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                        <Pencil className="w-4 h-4" />
                       </button>
-                    )}
+                      <button onClick={() => remove(r)}
+                        className="p-1.5 rounded hover:bg-red-50 text-red-500" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -232,7 +251,7 @@ export default function RepairsPage() {
       </div>
 
       {showForm && (
-        <RepairForm vehicles={vehicles} onClose={() => setShowForm(false)}
+        <RepairForm entry={editing} vehicles={vehicles} onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }} />
       )}
     </div>
@@ -252,15 +271,26 @@ function Stat({ label, value, icon: Icon }: { label: string; value: string; icon
 }
 
 function RepairForm({
-  vehicles, onClose, onSaved,
-}: { vehicles: Vehicle[]; onClose: () => void; onSaved: () => void }) {
+  entry, vehicles, onClose, onSaved,
+}: { entry: Repair | null; vehicles: Vehicle[]; onClose: () => void; onSaved: () => void }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // An edit opens with the job as recorded, not a blank form.
   const [form, setForm] = useState({
-    vehicleId: '', date: new Date().toISOString().slice(0, 10),
-    category: 'service', description: '', partsCost: '', labourCost: '',
-    odometer: '', garage: '', invoiceNo: '', status: 'completed',
-    downtimeDays: '', nextDueDate: '', nextDueOdometer: '', notes: '',
+    vehicleId: entry?.vehicleId ?? '',
+    date: entry ? entry.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    category: entry?.category ?? 'service',
+    description: entry?.description ?? '',
+    partsCost: entry?.partsCost ? String(entry.partsCost) : '',
+    labourCost: entry?.labourCost ? String(entry.labourCost) : '',
+    odometer: entry?.odometer != null ? String(entry.odometer) : '',
+    garage: entry?.garage ?? '',
+    invoiceNo: entry?.invoiceNo ?? '',
+    status: (entry?.status ?? 'completed') as string,
+    downtimeDays: entry?.downtimeDays ? String(entry.downtimeDays) : '',
+    nextDueDate: entry?.nextDueDate ? entry.nextDueDate.slice(0, 10) : '',
+    nextDueOdometer: entry?.nextDueOdometer != null ? String(entry.nextDueOdometer) : '',
+    notes: entry?.notes ?? '',
   });
 
   const total = (Number(form.partsCost) || 0) + (Number(form.labourCost) || 0);
@@ -270,8 +300,8 @@ function RepairForm({
     if (!form.vehicleId) { setError('Pick a vehicle'); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch('/api/repair', {
-        method: 'POST',
+      const res = await fetch(entry ? `/api/repair/${entry._id}` : '/api/repair', {
+        method: entry ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
@@ -297,7 +327,7 @@ function RepairForm({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
-          <h2 className="font-semibold text-gray-900">Log a workshop job</h2>
+          <h2 className="font-semibold text-gray-900">{entry ? 'Edit workshop job' : 'Log a workshop job'}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -376,7 +406,7 @@ function RepairForm({
             <button type="submit" disabled={saving}
               className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}>
-              {saving ? 'Saving…' : 'Save job'}
+              {saving ? 'Saving…' : entry ? 'Save changes' : 'Save job'}
             </button>
           </div>
         </form>

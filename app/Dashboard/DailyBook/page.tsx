@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, RefreshCw, TrendingUp, Fuel, Receipt, Wallet, Plus, X, Download,
+  AlertTriangle, RefreshCw, TrendingUp, Fuel, Receipt, Wallet, Plus, X, Download, Pencil, Trash2,
 } from 'lucide-react';
 import { exportSettlements } from '@/lib/bookExports';
 
@@ -91,6 +91,7 @@ export default function DailyBookPage() {
   const [driverId, setDriverId] = useState('');
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Settlement | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -133,6 +134,15 @@ export default function DailyBookPage() {
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [rows]);
 
+  async function remove(row: Settlement) {
+    if (!confirm(`Delete ${row.driverName}'s duty on ${row.date.slice(0, 10)}?`)) return;
+    const res = await fetch(`/api/settlement/${row._id}`, { method: 'DELETE' });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(j.error ?? 'Could not delete'); return; }
+    if (j.note) alert(j.note);
+    load();
+  }
+
   const flaggedCount = rows.filter((r) => r.discrepancy).length;
 
   // Names the file after the filters in force, so two exports never collide.
@@ -161,7 +171,7 @@ export default function DailyBookPage() {
             <Download className="w-4 h-4" /> Export
           </button>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
             style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}
           >
@@ -276,7 +286,8 @@ export default function DailyBookPage() {
                       <th className="px-3 py-2 font-medium text-right">Net</th>
                       <th className="px-3 py-2 font-medium text-right">To bank</th>
                       <th className="px-3 py-2 font-medium text-right">Cash in</th>
-                      <th className="px-5 py-2 font-medium text-right">Carried</th>
+                      <th className="px-3 py-2 font-medium text-right">Carried</th>
+                      <th className="px-5 py-2 font-medium text-right">Edit</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -316,7 +327,7 @@ export default function DailyBookPage() {
                         <Money v={r.netTotal} bold />
                         <Money v={r.transferToBank} />
                         <Money v={r.cashGiven} />
-                        <td className="px-5 py-2.5 text-right">
+                        <td className="px-3 py-2.5 text-right">
                           <span className={r.closingBalance < 0 ? 'text-red-600 font-medium' : 'text-gray-900'}>
                             {rupees(r.closingBalance)}
                           </span>
@@ -328,6 +339,16 @@ export default function DailyBookPage() {
                               calc {rupees(r.computedClosingBalance)}
                             </div>
                           )}
+                        </td>
+                        <td className="px-5 py-2.5 text-right whitespace-nowrap">
+                          <button onClick={() => { setEditing(r); setShowForm(true); }}
+                            className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => remove(r)}
+                            className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -341,6 +362,7 @@ export default function DailyBookPage() {
 
       {showForm && (
         <AddDutyForm
+          entry={editing}
           drivers={drivers}
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }}
@@ -388,23 +410,26 @@ function StatCard({
 /* ------------------------------------------------------------------ */
 
 function AddDutyForm({
-  drivers, onClose, onSaved,
+  entry, drivers, onClose, onSaved,
 }: {
-  drivers: Driver[]; onClose: () => void; onSaved: () => void;
+  entry: Settlement | null; drivers: Driver[]; onClose: () => void; onSaved: () => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // An edit opens with the duty as recorded, not a blank form.
   const [form, setForm] = useState({
-    date: new Date().toISOString().slice(0, 10),
-    driverId: '',
-    dutyType: 'day',
-    dutyNote: '',
-    fuelExpense: '',
-    tollExpense: '',
-    transferToBank: '',
-    cashGiven: '',
+    date: entry ? entry.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    driverId: entry?.driverId ?? '',
+    dutyType: (entry?.dutyType ?? 'day') as string,
+    dutyNote: entry?.dutyNote ?? '',
+    fuelExpense: entry?.fuelExpense ? String(entry.fuelExpense) : '',
+    tollExpense: entry?.tollExpense ? String(entry.tollExpense) : '',
+    transferToBank: entry?.transferToBank ? String(entry.transferToBank) : '',
+    cashGiven: entry?.cashGiven ? String(entry.cashGiven) : '',
   });
-  const [earnings, setEarnings] = useState<Record<string, string>>({});
+  const [earnings, setEarnings] = useState<Record<string, string>>(
+    Object.fromEntries(CHANNELS.map(([k]) => [k, entry?.earnings?.[k] ? String(entry.earnings[k]) : ''])),
+  );
 
   // Live preview of the same arithmetic the server will apply, so staff can
   // see the carried-forward figure before committing the row.
@@ -416,8 +441,8 @@ function AddDutyForm({
     if (!form.driverId) { setError('Pick a driver'); return; }
     setSaving(true); setError(null);
     try {
-      const res = await fetch('/api/settlement', {
-        method: 'POST',
+      const res = await fetch(entry ? `/api/settlement/${entry._id}` : '/api/settlement', {
+        method: entry ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
@@ -444,7 +469,7 @@ function AddDutyForm({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
-          <h2 className="font-semibold text-gray-900">Add a duty</h2>
+          <h2 className="font-semibold text-gray-900">{entry ? 'Edit duty' : 'Add a duty'}</h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -547,7 +572,7 @@ function AddDutyForm({
             <button type="submit" disabled={saving}
               className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}>
-              {saving ? 'Saving…' : 'Save duty'}
+              {saving ? 'Saving…' : entry ? 'Save changes' : 'Save duty'}
             </button>
           </div>
         </form>

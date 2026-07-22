@@ -21,6 +21,8 @@ interface Driver {
   emergencyContact?: string;
   baseSalary?: number;
   perKmRate?: number;
+  company?: string;
+  defaultShift?: 'day' | 'night' | null;
   active?: boolean;
   exitDate?: string | null;
   exitReason?: string;
@@ -58,6 +60,9 @@ export default function DriversPage() {
     trips: 0,
     baseSalary: 0,
     perKmRate: 0,
+    company: '',
+    defaultShift: '',
+    aliases: '',
   });
 
   useEffect(() => {
@@ -102,6 +107,9 @@ export default function DriversPage() {
       trips: 0,
       baseSalary: 0,
       perKmRate: 0,
+      company: '',
+      defaultShift: '',
+      aliases: '',
     });
     setShowModal(true);
   };
@@ -123,6 +131,10 @@ export default function DriversPage() {
       trips: driver.trips || 0,
       baseSalary: driver.baseSalary || 0,
       perKmRate: driver.perKmRate || 0,
+      company: driver.company || '',
+      defaultShift: driver.defaultShift || '',
+      // Stored as an array; edited as a comma-separated list.
+      aliases: (driver.aliases ?? []).join(', '),
     });
     setShowModal(true);
   };
@@ -150,6 +162,16 @@ export default function DriversPage() {
         trips: Number(formData.trips) || 0,
         baseSalary: Number(formData.baseSalary) || 0,
         perKmRate: Number(formData.perKmRate) || 0,
+        company: formData.company.trim(),
+        // Empty means "no usual shift", which the model stores as null.
+        defaultShift: formData.defaultShift || null,
+        // Edited as a comma-separated list, stored as an array. These are what
+        // the importer matches on, so a missing spelling means the next import
+        // creates a duplicate driver instead of updating this one.
+        aliases: String(formData.aliases ?? '')
+          .split(',')
+          .map((a: string) => a.trim())
+          .filter(Boolean),
       };
 
       const method = editingDriver ? 'PATCH' : 'POST';
@@ -186,8 +208,11 @@ export default function DriversPage() {
         rating: 0,
         trips: 0,
         baseSalary: 0,
-        perKmRate: 0,
-      });
+      perKmRate: 0,
+      company: '',
+      defaultShift: '',
+      aliases: '',
+    });
       
       fetchDrivers();
     } catch (err: any) {
@@ -471,6 +496,12 @@ export default function DriversPage() {
                   { label: 'Trips', key: 'trips', type: 'number', placeholder: '0' },
                   { label: 'Base Salary (₹/month)', key: 'baseSalary', type: 'number', placeholder: '15000' },
                   { label: 'Per KM Rate (₹/km)', key: 'perKmRate', type: 'number', placeholder: '2' },
+                  { label: 'Company', key: 'company', type: 'text', placeholder: 'CSC Travels' },
+                  { label: 'Usual Shift', key: 'defaultShift', type: 'select', options: ['', 'day', 'night'] },
+                  // Every spelling of this driver's name that appears in the
+                  // registers. The importer matches on these, so a missing
+                  // spelling means the next import creates a duplicate driver.
+                  { label: 'Also written as (comma separated)', key: 'aliases', type: 'text', placeholder: 'Aashish, Ashish' },
                 ].map((field) => (
                   <div key={field.key}>
                     <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>

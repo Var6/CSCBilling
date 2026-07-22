@@ -1,4 +1,5 @@
 import mongoose, { Schema, model, models } from 'mongoose';
+import { amendmentFields } from '@/lib/amend';
 
 /**
  * One driver's takings and expenses for one duty — the row the office has been
@@ -136,6 +137,8 @@ const DailySettlementSchema = new Schema(
       layout: String,
       row: Number,
     },
+
+    ...amendmentFields,
   },
   { timestamps: true, collection: 'dailysettlements' },
 );

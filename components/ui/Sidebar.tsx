@@ -18,6 +18,7 @@ import {
   Fuel,
   Wrench,
   Lightbulb,
+  BookText,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -35,6 +36,7 @@ const menuItems = [
   { label: 'Fuel & CNG', href: '/Dashboard/Fuel', icon: Fuel },
   { label: 'Repairs', href: '/Dashboard/Repairs', icon: Wrench },
   { label: 'Customers', href: '/Dashboard/Customers', icon: UserCheck },
+  { label: 'Cash Book', href: '/Dashboard/CashBook', icon: BookText },
   { label: 'Finance', href: '/Dashboard/Finance', icon: DollarSign },
   { label: 'Salary', href: '/Dashboard/Salary', icon: Wallet },
   { label: 'Payments', href: '/Dashboard/Payments', icon: MapPin },
