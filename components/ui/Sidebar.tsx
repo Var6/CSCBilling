@@ -14,6 +14,9 @@ import {
   UserCheck,
   BarChart2,
   Wallet,
+  BookOpen,
+  Fuel,
+  Wrench,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,8 +28,11 @@ const menuItems = [
   { label: 'Dashboard', href: '/Dashboard', icon: LayoutDashboard },
   { label: 'Trips', href: '/Dashboard/Trip/Booking', icon: Calendar },
   { label: 'Rides (App)', href: '/Dashboard/Rides', icon: MapPin },
+  { label: 'Daily Book', href: '/Dashboard/DailyBook', icon: BookOpen },
   { label: 'Drivers', href: '/Dashboard/Driver', icon: Users },
   { label: 'Vehicles', href: '/Dashboard/Car', icon: Car },
+  { label: 'Fuel & CNG', href: '/Dashboard/Fuel', icon: Fuel },
+  { label: 'Repairs', href: '/Dashboard/Repairs', icon: Wrench },
   { label: 'Customers', href: '/Dashboard/Customers', icon: UserCheck },
   { label: 'Finance', href: '/Dashboard/Finance', icon: DollarSign },
   { label: 'Salary', href: '/Dashboard/Salary', icon: Wallet },

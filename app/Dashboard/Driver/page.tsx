@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Car, Users, Menu, Bell, Settings, Plus, Edit, Trash2, Phone, Mail, MapPin, Calendar, X, User, CheckCircle, XCircle, Clock, Download } from 'lucide-react';
-import { exportToExcel } from '@/lib/exportToExcel';
+import { exportDrivers } from '@/lib/bookExports';
+import OffboardDriver from '@/components/OffboardDriver';
 import Link from 'next/link';
 
 interface Driver {
@@ -20,6 +21,12 @@ interface Driver {
   emergencyContact?: string;
   baseSalary?: number;
   perKmRate?: number;
+  active?: boolean;
+  exitDate?: string | null;
+  exitReason?: string;
+  currentBalance?: number;
+  balanceAtExit?: number | null;
+  aliases?: string[];
 }
 
 export default function DriversPage() {
@@ -31,6 +38,10 @@ export default function DriversPage() {
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // 'current' by default — a former driver should not clutter the day-to-day
+  // list, but their record stays reachable.
+  const [employment, setEmployment] = useState<'current' | 'former' | 'all'>('current');
+  const [offboarding, setOffboarding] = useState<Driver | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -221,8 +232,17 @@ export default function DriversPage() {
                          driver.phone.includes(searchTerm) ||
                          (driver.vehicle && driver.vehicle.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = filterStatus === 'all' || driver.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const isFormer = driver.active === false;
+    const matchesEmployment =
+      employment === 'all' || (employment === 'former' ? isFormer : !isFormer);
+    return matchesSearch && matchesStatus && matchesEmployment;
   });
+
+  const reinstate = async (driver: Driver) => {
+    const res = await fetch(`/api/driver/${driver._id}/offboard`, { method: 'DELETE' });
+    if (res.ok) fetchDrivers();
+    else alert((await res.json()).error ?? 'Could not reinstate this driver');
+  };
 
   const statusCounts = {
     all: drivers.length,
@@ -241,13 +261,9 @@ export default function DriversPage() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => exportToExcel(
-                'Drivers', 'Drivers',
-                ['Name','Phone','Email','Status','License No','Join Date','Rating','Total Trips','Blood Group','Emergency Contact','Address'],
-                drivers.map(d => [d.name, d.phone, d.email, d.status, d.license,
-                  d.joinDate ? new Date(d.joinDate).toLocaleDateString('en-IN') : '',
-                  d.rating, d.trips, d.bloodGroup||'', d.emergencyContact||'', d.address||''])
-              )}
+              onClick={() => exportDrivers(filteredDrivers as never, employment)}
+              disabled={!filteredDrivers.length}
+              title="Exports exactly the drivers listed below, with the filters currently applied"
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium border hover:bg-gray-50 transition-all text-sm"
               style={{ borderColor: '#E5E7EB', color: '#5A6C7D' }}
             >
@@ -303,6 +319,16 @@ export default function DriversPage() {
               <option value="on-trip">On Trip</option>
               <option value="offline">Offline</option>
             </select>
+            <select
+              value={employment}
+              onChange={(e) => setEmployment(e.target.value as 'current' | 'former' | 'all')}
+              className="px-4 py-3 rounded-lg"
+              style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+            >
+              <option value="current">Current drivers</option>
+              <option value="former">Former drivers</option>
+              <option value="all">Everyone</option>
+            </select>
           </div>
         </div>
 
@@ -320,9 +346,15 @@ export default function DriversPage() {
                       <div>
                         <h3 className="text-lg font-bold" style={{ color: '#1A2332' }}>{driver.name}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
-                            {driver.status.replace('-', ' ').toUpperCase()}
-                          </span>
+                          {driver.active === false ? (
+                            <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-200 text-gray-600">
+                              FORMER{driver.exitDate ? ` · ${new Date(driver.exitDate).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' })}` : ''}
+                            </span>
+                          ) : (
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
+                              {driver.status.replace('-', ' ').toUpperCase()}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -368,6 +400,25 @@ export default function DriversPage() {
                         Edit
                       </button>
                     </Link>
+                    {driver.active === false ? (
+                      <button
+                        onClick={() => reinstate(driver)}
+                        title="Bring this driver back. App access is not restored automatically."
+                        className="px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-emerald-50"
+                        style={{ border: '1px solid #10B981', color: '#059669' }}
+                      >
+                        Reinstate
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setOffboarding(driver)}
+                        title="Offboard — releases their vehicle and revokes app access, keeping their history"
+                        className="px-3 py-2 rounded-lg text-xs font-medium transition-all hover:bg-amber-50"
+                        style={{ border: '1px solid #F59E0B', color: '#B45309' }}
+                      >
+                        Offboard
+                      </button>
+                    )}
                     <button 
                       onClick={() => handleDeleteClick(driver)}
                       className="p-2 rounded-lg transition-all hover:bg-red-50" 
@@ -381,6 +432,15 @@ export default function DriversPage() {
             );
           })}
         </div>
+
+        {offboarding && (
+          <OffboardDriver
+            driverId={offboarding._id}
+            driverName={offboarding.name}
+            onClose={() => setOffboarding(null)}
+            onDone={() => { setOffboarding(null); fetchDrivers(); }}
+          />
+        )}
 
         {/* Add/Edit Driver Modal */}
         {showModal && (

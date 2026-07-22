@@ -17,7 +17,25 @@ const vehicleSchema = new Schema<IVehicle>({
   color: { type: String, default: '' },
   fuelType: { type: String, default: '' },
   mileage: { type: String, default: '0 km' },
-  
+
+  /**
+   * Last 4 digits of the plate. The fuel and duty books identify cars this way
+   * ("6494", "2762"), so imports and quick staff lookups both need it.
+   */
+  shortCode: { type: String, default: '', index: true },
+
+  /** Latest odometer seen from a fuel fill or a completed trip. */
+  currentOdometer: { type: Number, default: null },
+  odometerUpdatedAt: { type: Date, default: null },
+
+  /** Rolling average km per kg/litre, recomputed from consecutive fuel fills. */
+  avgMileage: { type: Number, default: null },
+
+  /** Lifetime fuel spend, so cost-per-km is available without an aggregation. */
+  totalFuelCost: { type: Number, default: 0 },
+  totalRepairCost: { type: Number, default: 0 },
+
+
   // Documents
   insurance: { type: String, default: '' },
   insuranceExpiry: { type: Date, required: true },
