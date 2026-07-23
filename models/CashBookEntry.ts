@@ -69,7 +69,13 @@ const CashBookEntrySchema = new Schema(
 
     remarks: { type: String, default: '' },
 
-    origin: { type: String, enum: ['sheet', 'app'], default: 'app', index: true },
+    origin: { type: String, enum: ['sheet', 'app', 'derived'], default: 'app', index: true },
+    /*
+     * True when the ride income and fuel/toll lines were built from the daily
+     * book rather than typed. Salaries and the rest on the same day stay manual.
+     */
+    derivedFromDailyBook: { type: Boolean, default: false },
+    derivedAt: { type: Date, default: null },
     source: {
       workbook: String,
       sheet: String,

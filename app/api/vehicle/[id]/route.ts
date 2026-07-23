@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Vehicle from '@/models/Vehicle';
 import { connectDB } from '@/lib/mongodb';
+import FuelLog from '@/models/FuelLog';
+import Repair from '@/models/Repair';
+import Trip from '@/models/Trip';
 import { applyFields } from '@/lib/amend';
 
 export const dynamic = 'force-dynamic';
@@ -109,16 +112,50 @@ export async function DELETE(req: NextRequest, context: Context) {
       return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 });
     }
 
-    // 🔒 Safety: prevent deleting assigned vehicle
     if (vehicle.assignedDriverId) {
       return NextResponse.json(
-        { error: 'Unassign driver before deleting vehicle' },
-        { status: 400 }
+        {
+          error: `${vehicle.assignedDriverName ?? 'A driver'} is still assigned to this vehicle. ` +
+            'Unassign them first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    /*
+     * Refuse to delete a vehicle that has history.
+     *
+     * Fuel logs, repairs and trips hold this vehicle's id. Deleting the vehicle
+     * leaves them pointing at nothing, and the per-vehicle costs and mileage
+     * silently stop adding up — with no error anywhere to explain why. Retiring
+     * the vehicle keeps the books whole; deleting is only for a row created by
+     * mistake.
+     */
+    const [fuelLogs, repairs, trips] = await Promise.all([
+      FuelLog.countDocuments({ vehicleId: vehicle._id }),
+      Repair.countDocuments({ vehicleId: vehicle._id }),
+      Trip.countDocuments({ 'vehicle.vehicleId': vehicle._id }),
+    ]);
+
+    const history = fuelLogs + repairs + trips;
+    if (history > 0) {
+      const parts = [
+        fuelLogs && `${fuelLogs} fuel log${fuelLogs > 1 ? 's' : ''}`,
+        repairs && `${repairs} repair${repairs > 1 ? 's' : ''}`,
+        trips && `${trips} trip${trips > 1 ? 's' : ''}`,
+      ].filter(Boolean);
+      return NextResponse.json(
+        {
+          error: `This vehicle has ${parts.join(', ')} against it. Deleting it would ` +
+            'leave those records pointing at nothing. Set its status to "maintenance" ' +
+            'to take it off the road instead.',
+          history: { fuelLogs, repairs, trips },
+        },
+        { status: 409 },
       );
     }
 
     await vehicle.deleteOne();
-
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting vehicle:', error);

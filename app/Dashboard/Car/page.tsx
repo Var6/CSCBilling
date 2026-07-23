@@ -273,7 +273,10 @@ export default function VehiclesPage() {
         method: 'DELETE',
       });
 
-      if (!res.ok) throw new Error('Failed to delete vehicle');
+      // The server explains *why* it refused — an assigned driver, or history
+      // that would be orphaned. Throwing a generic message hid all of it.
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to delete vehicle');
 
       setShowDeleteModal(false);
       setVehicleToDelete(null);
@@ -282,7 +285,7 @@ export default function VehiclesPage() {
       alert('Vehicle deleted successfully!');
     } catch (error) {
       console.error('Error deleting vehicle:', error);
-      alert('Failed to delete vehicle');
+      alert(error instanceof Error ? error.message : 'Failed to delete vehicle');
     }
   };
 

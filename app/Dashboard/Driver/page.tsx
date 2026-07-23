@@ -29,6 +29,7 @@ interface Driver {
   currentBalance?: number;
   balanceAtExit?: number | null;
   aliases?: string[];
+  photoUrl?: string;
 }
 
 export default function DriversPage() {
@@ -241,7 +242,10 @@ export default function DriversPage() {
         method: 'DELETE',
       });
 
-      if (!res.ok) throw new Error('Failed to delete driver');
+      // The server explains why it refused — usually that deleting would strip
+      // recorded earnings out of the books. Offboarding is the right route then.
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to delete driver');
 
       setShowDeleteModal(false);
       setDriverToDelete(null);
@@ -249,7 +253,7 @@ export default function DriversPage() {
       fetchDrivers();
     } catch (error) {
       console.error('Error deleting driver:', error);
-      alert('Failed to delete driver');
+      alert(error instanceof Error ? error.message : 'Failed to delete driver');
     }
   };
 
@@ -390,9 +394,15 @@ export default function DriversPage() {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                        {driver.name.split(' ').map(n => n[0]).join('')}
-                      </div>
+                      {driver.photoUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={driver.photoUrl} alt={driver.name}
+                          className="w-16 h-16 rounded-full object-cover" style={{ border: '2px solid #E5E7EB' }} />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-bold" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+                          {driver.name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2)}
+                        </div>
+                      )}
                       <div>
                         <h3 className="text-lg font-bold" style={{ color: '#1A2332' }}>{driver.name}</h3>
                         <div className="flex items-center gap-2 mt-1">

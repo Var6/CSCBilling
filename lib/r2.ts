@@ -37,6 +37,17 @@ export const r2Configured = () =>
 
 let client: S3Client | null = null;
 
+/**
+ * The one place an S3 client is built.
+ *
+ * Callers must not construct their own from process.env: the endpoint has been
+ * pasted with embedded quotes more than once, and a second reader that skips
+ * the sanitising above fails at upload time with an unresolvable hostname.
+ */
+export function getR2Client(): S3Client {
+  return getClient();
+}
+
 function getClient(): S3Client {
   if (!r2Configured()) {
     throw new Error(

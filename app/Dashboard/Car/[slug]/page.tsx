@@ -28,6 +28,15 @@ interface Vehicle {
   monthlyEarnings: number;
   totalTrips: number;
   maintenanceRecords: MaintenanceRecord[];
+  photoUrl?: string;
+  rcDocUrl?: string;
+  insuranceDocUrl?: string;
+  pollutionDocUrl?: string;
+  fitnessDocUrl?: string;
+  permitDocUrl?: string;
+  shortCode?: string;
+  company?: string;
+  currentOdometer?: number | null;
 }
 
 interface MaintenanceRecord {
@@ -313,9 +322,16 @@ export default function VehicleDetailPage() {
             {/* Vehicle Info Card */}
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
               <div className="flex items-start gap-6 mb-6">
-                <div className="w-24 h-24 rounded-xl flex items-center justify-center text-white shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                  <Car className="w-12 h-12" />
-                </div>
+                {vehicle.photoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={vehicle.photoUrl} alt={vehicle.name}
+                    className="w-24 h-24 rounded-xl object-cover shrink-0"
+                    style={{ border: '1px solid #E5E7EB' }} />
+                ) : (
+                  <div className="w-24 h-24 rounded-xl flex items-center justify-center text-white shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+                    <Car className="w-12 h-12" />
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl font-bold" style={{ color: '#1A2332' }}>{vehicle.name}</h2>

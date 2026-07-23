@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Plus, RefreshCw, X, IndianRupee, Wallet, AlertTriangle, Pencil, Trash2, Download,
+  Plus, RefreshCw, X, IndianRupee, Wallet, AlertTriangle, Pencil, Trash2, Download, DownloadCloud,
 } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportToExcel';
 
@@ -42,8 +42,9 @@ type Entry = {
   computedClosing: number;
   discrepancy: boolean;
   remarks: string;
-  origin: 'sheet' | 'app';
+  origin: 'sheet' | 'app' | 'derived';
   amended?: boolean;
+  derivedFromDailyBook?: boolean;
 };
 
 const rupees = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
@@ -59,6 +60,7 @@ export default function CashBookPage() {
   const [account, setAccount] = useState<'' | Account>('');
   const [editing, setEditing] = useState<Entry | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -80,6 +82,28 @@ export default function CashBookPage() {
   }, [account]);
 
   useEffect(() => { load(); }, [load]);
+
+  /*
+   * Pulls ride income and fuel/toll through from the daily book, so the two
+   * ledgers cannot drift. Only those lines are rewritten — a salary recorded
+   * against the same day is left alone.
+   */
+  async function syncFromDailyBook() {
+    if (!confirm(
+      'Build cash book days from the daily book?\n\n' +
+      'Ride income and fuel/toll will be filled in from recorded duties. ' +
+      'Anything you typed yourself — salaries, insurance, challans — is kept.'
+    )) return;
+    setSyncing(true); setError(null);
+    try {
+      const res = await fetch('/api/cashbook/sync', { method: 'POST' });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? 'Could not sync');
+      load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally { setSyncing(false); }
+  }
 
   async function remove(row: Entry) {
     if (!confirm(`Delete the ${row.account} entry for ${day(row.date)}?`)) return;
@@ -119,6 +143,12 @@ export default function CashBookPage() {
           <button onClick={exportRows} disabled={!rows.length}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
             <Download className="w-4 h-4" /> Export
+          </button>
+          <button onClick={syncFromDailyBook} disabled={syncing}
+            title="Fill ride income and fuel/toll from the recorded duties"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
+            <DownloadCloud className={`w-4 h-4 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? 'Building…' : 'Pull from daily book'}
           </button>
           <button onClick={() => { setEditing(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
@@ -175,6 +205,10 @@ export default function CashBookPage() {
                     <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 uppercase">{r.account}</span>
                     {r.amended && (
                       <span className="ml-2 text-[11px] text-amber-600" title="Corrected since import">amended</span>
+                    )}
+                    {r.derivedFromDailyBook && (
+                      <span className="ml-2 text-[11px] text-blue-600"
+                        title="Ride income and fuel/toll came from the daily book">from duties</span>
                     )}
                   </td>
                   <td className="px-3 py-3 text-right text-gray-600">{rupees(r.opening)}</td>

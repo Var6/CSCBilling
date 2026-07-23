@@ -1,4 +1,5 @@
 'use client';
+import NotificationBell from '@/components/ui/NotificationBell';
 import { Car, Users, TrendingUp, DollarSign, AlertCircle, Menu, Bell, Search, Settings, LogOut, LayoutDashboard, MapPin, FileText, Calendar } from 'lucide-react';
 
 export default function Topbar({ sidebarOpen, setSidebarOpen, user }: { sidebarOpen: boolean; setSidebarOpen: any; user: any }) {
@@ -24,15 +25,18 @@ export default function Topbar({ sidebarOpen, setSidebarOpen, user }: { sidebarO
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <button className="relative p-2 hover:bg-gray-50 rounded-lg">
-            <Bell className="w-5 h-5" style={{ color: '#5A6C7D' }} />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: '#EF4444' }}></span>
-          </button>
+          {/* Was a static icon with a permanently red dot. Now real alerts. */}
+          <NotificationBell />
           <button className="p-2 hover:bg-gray-50 rounded-lg">
             <Settings className="w-5 h-5" style={{ color: '#5A6C7D' }} />
           </button>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-medium" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-            AD
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center text-white font-medium text-sm"
+            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+            title={user?.admin_email}
+          >
+            {(user?.admin_full_name ?? '')
+              .split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'CS'}
           </div>
         </div>
       </div>

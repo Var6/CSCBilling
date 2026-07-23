@@ -73,22 +73,47 @@ export default function FileUpload({
        * document scan on a phone connection takes long enough that a silent
        * spinner reads as a hang.
        */
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', signed.uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () =>
-          xhr.status >= 200 && xhr.status < 300
-            ? resolve()
-            : reject(new Error(`Upload rejected by storage (${xhr.status})`));
-        xhr.onerror = () => reject(new Error('The upload failed. Check your connection.'));
-        xhr.send(file);
-      });
+      let storedUrl: string | null = null;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', signed.uploadUrl);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
+          };
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Upload rejected by storage (${xhr.status})`));
+          // A blocked CORS preflight is indistinguishable from a dropped
+          // connection here — the browser reports both as a bare network error.
+          xhr.onerror = () => reject(new Error('DIRECT_UPLOAD_BLOCKED'));
+          xhr.send(file);
+        });
+        storedUrl = signed.publicUrl ?? null;
+      } catch (directErr) {
+        if ((directErr as Error).message !== 'DIRECT_UPLOAD_BLOCKED') throw directErr;
 
-      if (!signed.publicUrl) {
+        /*
+         * The bucket has no CORS rule allowing this origin, so the browser
+         * cannot talk to R2 itself. Relay through the server instead, which is
+         * not subject to CORS. Slower and size-limited, but it works today
+         * without anyone having to change bucket settings first.
+         */
+        setProgress(0);
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', folder);
+        if (ownerId) fd.append('ownerId', ownerId);
+
+        const relay = await fetch('/api/uploads/direct', { method: 'POST', body: fd });
+        const relayed = await relay.json().catch(() => ({}));
+        if (!relay.ok) throw new Error(relayed.error ?? 'The upload failed');
+        storedUrl = relayed.publicUrl ?? null;
+      }
+
+      if (!storedUrl) {
         throw new Error('Uploaded, but the bucket has no public URL configured');
       }
 
@@ -99,8 +124,8 @@ export default function FileUpload({
        * often the only copy of a document.
        */
       const previous = value;
-      onChange(signed.publicUrl);
-      if (previous && previous !== signed.publicUrl) {
+      onChange(storedUrl);
+      if (previous && previous !== storedUrl) {
         fetch(`/api/uploads/sign?url=${encodeURIComponent(previous)}`, { method: 'DELETE' })
           .catch(() => { /* the record already points at the new file */ });
       }

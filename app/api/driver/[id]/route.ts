@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Driver from '@/models/Driver';
 import { connectDB } from '@/lib/mongodb';
+import DailySettlement from '@/models/DailySettlement';
+import FuelLog from '@/models/FuelLog';
+import Trip from '@/models/Trip';
 import { applyFields } from '@/lib/amend';
 
 export const dynamic = 'force-dynamic';
@@ -121,7 +124,46 @@ export async function DELETE(req: NextRequest, context: Context) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
     }
-    await Driver.findByIdAndDelete(id);
+    const driver = await Driver.findById(id);
+    // findByIdAndDelete reported success even when nothing matched, so a failed
+    // delete looked identical to a successful one.
+    if (!driver) return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
+
+    /*
+     * Refuse to delete a driver who has history.
+     *
+     * Settlements, fuel logs and trips hold this driver's id. Deleting the row
+     * orphans them: the daily book still shows the duties, but the driver they
+     * belong to no longer exists, and their earnings vanish from every report
+     * with nothing to explain it. Offboarding is the intended route — it keeps
+     * the history and revokes access.
+     */
+    const [settlements, fuelLogs, trips] = await Promise.all([
+      DailySettlement.countDocuments({ driverId: driver._id }),
+      FuelLog.countDocuments({ driverId: driver._id }),
+      Trip.countDocuments({ 'driver.driverId': driver._id }),
+    ]);
+
+    const history = settlements + fuelLogs + trips;
+    if (history > 0) {
+      const parts = [
+        settlements && `${settlements} recorded dut${settlements > 1 ? 'ies' : 'y'}`,
+        fuelLogs && `${fuelLogs} fuel log${fuelLogs > 1 ? 's' : ''}`,
+        trips && `${trips} trip${trips > 1 ? 's' : ''}`,
+      ].filter(Boolean);
+      return NextResponse.json(
+        {
+          error: `${driver.name} has ${parts.join(', ')}. Deleting them would remove ` +
+            'those earnings from your books. Use Offboard instead — it keeps the ' +
+            'history and revokes their access.',
+          history: { settlements, fuelLogs, trips },
+          suggestOffboard: true,
+        },
+        { status: 409 },
+      );
+    }
+
+    await driver.deleteOne();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('DELETE /api/driver/[id] error:', error);
