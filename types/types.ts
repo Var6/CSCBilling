@@ -15,11 +15,11 @@ export interface IVehicle {
   shortCode?: string;
   currentOdometer?: number | null;
   photoUrl?: string;
-  rcDocUrl?: string;
-  insuranceDocUrl?: string;
-  pollutionDocUrl?: string;
-  fitnessDocUrl?: string;
-  permitDocUrl?: string;
+  rcDocUrls?: string[];
+  insuranceDocUrls?: string[];
+  pollutionDocUrls?: string[];
+  fitnessDocUrls?: string[];
+  permitDocUrls?: string[];
   odometerUpdatedAt?: Date | null;
   avgMileage?: number | null;
   totalFuelCost?: number;
@@ -77,9 +77,9 @@ export interface IDriver {
   /** Every spelling of this driver's name seen in the paper registers. */
   aliases?: string[];
   photoUrl?: string;
-  licenseDocUrl?: string;
-  idProofUrl?: string;
-  policeVerificationUrl?: string;
+  licenseDocUrls?: string[];
+  idProofUrls?: string[];
+  policeVerificationUrls?: string[];
   /** Cash the driver currently holds for the company (the "Rest Amount"). */
   currentBalance?: number;
   balanceUpdatedAt?: Date | null;

@@ -74,7 +74,7 @@ export async function PATCH(req: NextRequest, context: Context) {
       'address', 'bloodGroup', 'emergencyContact', 'status',
       'rating', 'trips', 'baseSalary', 'perKmRate',
       'aliases', 'defaultShift',
-      'photoUrl', 'licenseDocUrl', 'idProofUrl', 'policeVerificationUrl',
+      'photoUrl', 'licenseDocUrls', 'idProofUrls', 'policeVerificationUrls',
     ] as const;
 
     /*

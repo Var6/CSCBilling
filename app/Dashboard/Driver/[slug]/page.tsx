@@ -196,64 +196,52 @@ export default function DriverDetailPage() {
     }
   };
 
+  /*
+   * One call that links both sides.
+   *
+   * This used to PATCH the driver and then PATCH `/api/vehicles/:id` — plural,
+   * where the route is singular. That request 404'd every time, and nothing
+   * checked the response, so the driver pointed at a vehicle that never pointed
+   * back. Everything downstream that needs the pairing — attributing a fuel fill
+   * to a car, or a day's takings to a vehicle — silently had nothing to work
+   * with.
+   */
   const handleAssignVehicle = async (vehicle: Vehicle) => {
     if (!driver || !driverId) return;
 
     try {
-      await fetch(`/api/driver/${driverId}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/driver/${driverId}/assign-vehicle`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehicle: `${vehicle.name} - ${vehicle.plate}`,
-          vehicleId: vehicle._id
-        })
+        body: JSON.stringify({ vehicleId: vehicle._id }),
       });
-
-      await fetch(`/api/vehicles/${vehicle._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignedDriverId: driver._id,
-          assignedDriverName: driver.name,
-          status: 'in-use'
-        })
-      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Could not assign the vehicle');
 
       setShowVehicleModal(false);
       setIsUnlocked(false);
       fetchDriver();
       fetchVehicles();
     } catch (error) {
-      console.error('❌ Error assigning vehicle:', error);
+      console.error('Error assigning vehicle:', error);
+      alert(error instanceof Error ? error.message : 'Could not assign the vehicle');
     }
   };
 
   const handleUnassignVehicle = async () => {
     if (!driver || !driver.vehicleId || !driverId) return;
-
     if (!confirm('Unassign current vehicle?')) return;
 
     try {
-      await fetch(`/api/driver/${driverId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehicle: null, vehicleId: null })
-      });
-
-      await fetch(`/api/vehicles/${driver.vehicleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignedDriverId: null,
-          assignedDriverName: null,
-          status: 'available'
-        })
-      });
+      const res = await fetch(`/api/driver/${driverId}/assign-vehicle`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Could not unassign the vehicle');
 
       fetchDriver();
       fetchVehicles();
     } catch (error) {
-      console.error('❌ Error unassigning vehicle:', error);
+      console.error('Error unassigning vehicle:', error);
+      alert(error instanceof Error ? error.message : 'Could not unassign the vehicle');
     }
   };
 

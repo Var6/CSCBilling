@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Save, X, Loader2 } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
+import MultiFileUpload from '@/components/MultiFileUpload';
 
 /**
  * Inline editor for a vehicle.
@@ -36,11 +37,11 @@ export interface VehicleLike {
   fitnessExpiry?: string | null;
   rcNumber?: string;
   photoUrl?: string;
-  rcDocUrl?: string;
-  insuranceDocUrl?: string;
-  pollutionDocUrl?: string;
-  fitnessDocUrl?: string;
-  permitDocUrl?: string;
+  rcDocUrls?: string[];
+  insuranceDocUrls?: string[];
+  pollutionDocUrls?: string[];
+  fitnessDocUrls?: string[];
+  permitDocUrls?: string[];
 }
 
 /** Date inputs need YYYY-MM-DD; the API returns ISO strings or null. */
@@ -74,13 +75,13 @@ export default function VehicleEditor({
     fitnessExpiry: asDateInput(vehicle.fitnessExpiry),
   });
 
-  const [docs, setDocs] = useState({
-    photoUrl: vehicle.photoUrl ?? '',
-    rcDocUrl: vehicle.rcDocUrl ?? '',
-    insuranceDocUrl: vehicle.insuranceDocUrl ?? '',
-    pollutionDocUrl: vehicle.pollutionDocUrl ?? '',
-    fitnessDocUrl: vehicle.fitnessDocUrl ?? '',
-    permitDocUrl: vehicle.permitDocUrl ?? '',
+  const [photoUrl, setPhotoUrl] = useState(vehicle.photoUrl ?? '');
+  const [docs, setDocs] = useState<Record<string, string[]>>({
+    rcDocUrls: vehicle.rcDocUrls ?? [],
+    insuranceDocUrls: vehicle.insuranceDocUrls ?? [],
+    pollutionDocUrls: vehicle.pollutionDocUrls ?? [],
+    fitnessDocUrls: vehicle.fitnessDocUrls ?? [],
+    permitDocUrls: vehicle.permitDocUrls ?? [],
   });
 
   const [saving, setSaving] = useState(false);
@@ -102,6 +103,7 @@ export default function VehicleEditor({
         body: JSON.stringify({
           ...form,
           ...docs,
+          photoUrl,
           year: Number(form.year) || new Date().getFullYear(),
           // Blank means "not recorded", which the model stores as null rather
           // than an Invalid Date.
@@ -176,20 +178,20 @@ export default function VehicleEditor({
         </Grid>
       </Section>
 
-      <Section title="Scans and photos" hint="Stored securely; openable from a phone at a check post.">
+      <Section title="Scans and photos" hint="Both sides where a document has them. Openable from a phone at a check post.">
         <Grid>
           <FileUpload label="Vehicle photo" folder="vehicle-photos" ownerId={vehicle._id}
-            value={docs.photoUrl} onChange={(u) => setDocs({ ...docs, photoUrl: u ?? '' })} />
-          <FileUpload label="RC book" folder="vehicle-documents" ownerId={vehicle._id}
-            value={docs.rcDocUrl} onChange={(u) => setDocs({ ...docs, rcDocUrl: u ?? '' })} />
-          <FileUpload label="Insurance" folder="vehicle-documents" ownerId={vehicle._id}
-            value={docs.insuranceDocUrl} onChange={(u) => setDocs({ ...docs, insuranceDocUrl: u ?? '' })} />
-          <FileUpload label="Pollution certificate" folder="vehicle-documents" ownerId={vehicle._id}
-            value={docs.pollutionDocUrl} onChange={(u) => setDocs({ ...docs, pollutionDocUrl: u ?? '' })} />
-          <FileUpload label="Fitness certificate" folder="vehicle-documents" ownerId={vehicle._id}
-            value={docs.fitnessDocUrl} onChange={(u) => setDocs({ ...docs, fitnessDocUrl: u ?? '' })} />
-          <FileUpload label="Permit" folder="vehicle-documents" ownerId={vehicle._id}
-            value={docs.permitDocUrl} onChange={(u) => setDocs({ ...docs, permitDocUrl: u ?? '' })} />
+            value={photoUrl} onChange={(u) => setPhotoUrl(u ?? '')} />
+          <MultiFileUpload label="RC book" hint="front and back" folder="vehicle-documents" ownerId={vehicle._id}
+            value={docs.rcDocUrls} onChange={(u) => setDocs({ ...docs, rcDocUrls: u })} />
+          <MultiFileUpload label="Insurance" hint="all pages" folder="vehicle-documents" ownerId={vehicle._id}
+            value={docs.insuranceDocUrls} onChange={(u) => setDocs({ ...docs, insuranceDocUrls: u })} />
+          <MultiFileUpload label="Pollution certificate" folder="vehicle-documents" ownerId={vehicle._id}
+            value={docs.pollutionDocUrls} onChange={(u) => setDocs({ ...docs, pollutionDocUrls: u })} />
+          <MultiFileUpload label="Fitness certificate" folder="vehicle-documents" ownerId={vehicle._id}
+            value={docs.fitnessDocUrls} onChange={(u) => setDocs({ ...docs, fitnessDocUrls: u })} />
+          <MultiFileUpload label="Permit" hint="all pages" folder="vehicle-documents" ownerId={vehicle._id}
+            value={docs.permitDocUrls} onChange={(u) => setDocs({ ...docs, permitDocUrls: u })} />
         </Grid>
       </Section>
 

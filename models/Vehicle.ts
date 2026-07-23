@@ -56,11 +56,13 @@ const vehicleSchema = new Schema<IVehicle>({
    * having to proxy them.
    */
   photoUrl: { type: String, default: '' },
-  rcDocUrl: { type: String, default: '' },
-  insuranceDocUrl: { type: String, default: '' },
-  pollutionDocUrl: { type: String, default: '' },
-  fitnessDocUrl: { type: String, default: '' },
-  permitDocUrl: { type: String, default: '' },
+  // Arrays: an RC book has two sides, and insurance and permits often run to
+  // several pages. Order is meaningful — the first page is the front.
+  rcDocUrls: { type: [String], default: [] },
+  insuranceDocUrls: { type: [String], default: [] },
+  pollutionDocUrls: { type: [String], default: [] },
+  fitnessDocUrls: { type: [String], default: [] },
+  permitDocUrls: { type: [String], default: [] },
   
   // Driver Assignment
   assignedDriverId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },

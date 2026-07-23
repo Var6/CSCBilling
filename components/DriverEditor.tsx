@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Save, X, Loader2 } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
+import MultiFileUpload from '@/components/MultiFileUpload';
 import { Section, Grid, Field, Input, Select } from '@/components/VehicleEditor';
 
 /**
@@ -31,9 +32,9 @@ export interface DriverLike {
   defaultShift?: string | null;
   aliases?: string[];
   photoUrl?: string;
-  licenseDocUrl?: string;
-  idProofUrl?: string;
-  policeVerificationUrl?: string;
+  licenseDocUrls?: string[];
+  idProofUrls?: string[];
+  policeVerificationUrls?: string[];
 }
 
 const asDateInput = (v?: string | null) => (v ? new Date(v).toISOString().slice(0, 10) : '');
@@ -63,11 +64,11 @@ export default function DriverEditor({
     aliases: (driver.aliases ?? []).join(', '),
   });
 
-  const [docs, setDocs] = useState({
-    photoUrl: driver.photoUrl ?? '',
-    licenseDocUrl: driver.licenseDocUrl ?? '',
-    idProofUrl: driver.idProofUrl ?? '',
-    policeVerificationUrl: driver.policeVerificationUrl ?? '',
+  const [photoUrl, setPhotoUrl] = useState(driver.photoUrl ?? '');
+  const [docs, setDocs] = useState<Record<string, string[]>>({
+    licenseDocUrls: driver.licenseDocUrls ?? [],
+    idProofUrls: driver.idProofUrls ?? [],
+    policeVerificationUrls: driver.policeVerificationUrls ?? [],
   });
 
   const [saving, setSaving] = useState(false);
@@ -87,6 +88,7 @@ export default function DriverEditor({
         body: JSON.stringify({
           ...form,
           ...docs,
+          photoUrl,
           baseSalary: Number(form.baseSalary) || 0,
           perKmRate: Number(form.perKmRate) || 0,
           rating: Number(form.rating) || 0,
@@ -157,17 +159,16 @@ export default function DriverEditor({
         </Grid>
       </Section>
 
-      <Section title="Documents">
+      <Section title="Documents" hint="Both sides where a document has them.">
         <Grid>
           <FileUpload label="Photo" folder="driver-photos" ownerId={driver._id}
-            value={docs.photoUrl} onChange={(u) => setDocs({ ...docs, photoUrl: u ?? '' })} />
-          <FileUpload label="Driving licence" folder="driver-documents" ownerId={driver._id}
-            value={docs.licenseDocUrl} onChange={(u) => setDocs({ ...docs, licenseDocUrl: u ?? '' })} />
-          <FileUpload label="ID proof (Aadhaar / PAN)" folder="driver-documents" ownerId={driver._id}
-            value={docs.idProofUrl} onChange={(u) => setDocs({ ...docs, idProofUrl: u ?? '' })} />
-          <FileUpload label="Police verification" folder="driver-documents" ownerId={driver._id}
-            value={docs.policeVerificationUrl}
-            onChange={(u) => setDocs({ ...docs, policeVerificationUrl: u ?? '' })} />
+            value={photoUrl} onChange={(u) => setPhotoUrl(u ?? '')} />
+          <MultiFileUpload label="Driving licence" hint="front and back" folder="driver-documents" ownerId={driver._id}
+            value={docs.licenseDocUrls} onChange={(u) => setDocs({ ...docs, licenseDocUrls: u })} />
+          <MultiFileUpload label="ID proof (Aadhaar / PAN)" hint="front and back" folder="driver-documents" ownerId={driver._id}
+            value={docs.idProofUrls} onChange={(u) => setDocs({ ...docs, idProofUrls: u })} />
+          <MultiFileUpload label="Police verification" hint="all pages" folder="driver-documents" ownerId={driver._id}
+            value={docs.policeVerificationUrls} onChange={(u) => setDocs({ ...docs, policeVerificationUrls: u })} />
         </Grid>
       </Section>
 

@@ -61,8 +61,8 @@ export async function PATCH(req: NextRequest, context: Context) {
       'currentOdometer',
       'assignedDriverId', 'assignedDriverName',
       'maintenanceRecords',
-      'photoUrl', 'rcDocUrl', 'insuranceDocUrl',
-      'pollutionDocUrl', 'fitnessDocUrl', 'permitDocUrl',
+      'photoUrl', 'rcDocUrls', 'insuranceDocUrls',
+      'pollutionDocUrls', 'fitnessDocUrls', 'permitDocUrls',
     ] as const;
 
     const changed = applyFields(vehicle, body, EDITABLE);

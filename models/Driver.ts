@@ -35,11 +35,17 @@ const driverSchema = new Schema<IDriver>(
     /** Usual shift. Individual duties can still differ. */
     defaultShift: { type: String, enum: ['day', 'night', null], default: null },
 
-    /** Scans and photos, stored in R2 — see lib/r2.ts. */
+    /**
+     * Scans and photos, stored in R2 — see lib/r2.ts.
+     *
+     * Documents are arrays because a licence and an Aadhaar card both have two
+     * sides, and a single slot forced staff to choose which half to keep.
+     * Order is meaningful: first page is the front.
+     */
     photoUrl: { type: String, default: '' },
-    licenseDocUrl: { type: String, default: '' },
-    idProofUrl: { type: String, default: '' },
-    policeVerificationUrl: { type: String, default: '' },
+    licenseDocUrls: { type: [String], default: [] },
+    idProofUrls: { type: [String], default: [] },
+    policeVerificationUrls: { type: [String], default: [] },
 
     /** False for drivers who have left; keeps their history queryable. */
     active: { type: Boolean, default: true, index: true },
