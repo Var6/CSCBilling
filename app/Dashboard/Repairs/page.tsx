@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, RefreshCw, Wrench, X, IndianRupee, CalendarClock, CheckCircle2, Download, Pencil, Trash2 } from 'lucide-react';
 import { exportRepairs } from '@/lib/bookExports';
+import FileUpload from '@/components/FileUpload';
 
 /**
  * Workshop visits.
@@ -31,6 +32,7 @@ type Repair = {
   nextDueDate: string | null;
   nextDueOdometer: number | null;
   notes: string;
+  billUrl?: string;
   origin: 'sheet' | 'app';
 };
 
@@ -292,6 +294,7 @@ function RepairForm({
     nextDueOdometer: entry?.nextDueOdometer != null ? String(entry.nextDueOdometer) : '',
     notes: entry?.notes ?? '',
   });
+  const [billUrl, setBillUrl] = useState(entry?.billUrl ?? '');
 
   const total = (Number(form.partsCost) || 0) + (Number(form.labourCost) || 0);
 
@@ -311,6 +314,7 @@ function RepairForm({
           downtimeDays: Number(form.downtimeDays) || 0,
           nextDueDate: form.nextDueDate || null,
           nextDueOdometer: form.nextDueOdometer ? Number(form.nextDueOdometer) : null,
+          billUrl,
         }),
       });
       const json = await res.json();
@@ -388,6 +392,13 @@ function RepairForm({
             <L label="Next service due (km)"><input type="number" min="0" value={form.nextDueOdometer} className={input}
               onChange={(e) => setForm({ ...form, nextDueOdometer: e.target.value })} /></L>
           </div>
+
+          <FileUpload
+            label="Workshop bill (optional)"
+            folder="repair-bills"
+            value={billUrl}
+            onChange={(u) => setBillUrl(u ?? '')}
+          />
 
           <div className="bg-gray-50 rounded-lg p-3 text-sm flex justify-between">
             <span className="text-gray-600">Total bill</span>

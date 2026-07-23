@@ -152,6 +152,7 @@ export async function POST(req: NextRequest) {
       kmSinceLast,
       mileage,
       notes: body.notes ?? '',
+      slipUrl: body.slipUrl ?? '',
       origin: 'app',
     });
 

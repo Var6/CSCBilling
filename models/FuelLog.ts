@@ -54,6 +54,8 @@ const FuelLogSchema = new Schema(
     mileage: { type: Number, default: null },
 
     notes: { type: String, default: '' },
+    /** Photo of the pump slip, stored in R2 — the evidence behind the amount. */
+    slipUrl: { type: String, default: '' },
 
     origin: { type: String, enum: ['sheet', 'app'], default: 'app', index: true },
     source: {

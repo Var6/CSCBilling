@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic';
 const EDITABLE = [
   'date', 'driverId', 'vehicleId', 'fuelType',
   'amount', 'quantity', 'meterReading', 'meterNote',
-  'startKm', 'endKm', 'notes',
+  'startKm', 'endKm', 'notes', 'slipUrl',
 ] as const;
 
 /** Same bounds the importer applies — see scripts/import-sheets.mjs. */

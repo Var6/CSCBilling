@@ -56,6 +56,8 @@ const RepairSchema = new Schema(
 
     garage: { type: String, default: '' },
     invoiceNo: { type: String, default: '' },
+    /** Scan of the workshop bill, stored in R2. */
+    billUrl: { type: String, default: '' },
 
     status: {
       type: String,

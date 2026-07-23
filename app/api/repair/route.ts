@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
       odometer: body.odometer == null ? null : Number(body.odometer),
       garage: body.garage ?? '',
       invoiceNo: body.invoiceNo ?? '',
+      billUrl: body.billUrl ?? '',
       status,
       downtimeDays: Math.max(Number(body.downtimeDays) || 0, 0),
       nextDueDate: body.nextDueDate ? new Date(body.nextDueDate) : null,

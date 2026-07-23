@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, RefreshCw, Fuel, Gauge, X, IndianRupee, Download, Pencil, Trash2 } from 'lucide-react';
 import { exportFuel } from '@/lib/bookExports';
+import FileUpload from '@/components/FileUpload';
 
 /**
  * The fuel / CNG book.
@@ -31,6 +32,7 @@ type FuelLog = {
   vehicleId?: string | null;
   fuelType?: string;
   notes?: string;
+  slipUrl?: string;
   amended?: boolean;
 };
 
@@ -261,6 +263,8 @@ function FuelForm({
     fuelType: entry?.fuelType ?? 'cng',
     notes: entry?.notes ?? '',
   });
+  // The slip is the evidence behind the amount — worth attaching at entry.
+  const [slipUrl, setSlipUrl] = useState(entry?.slipUrl ?? '');
 
   const rate = Number(form.quantity) > 0
     ? Math.round((Number(form.amount) / Number(form.quantity)) * 100) / 100
@@ -279,6 +283,7 @@ function FuelForm({
           amount: Number(form.amount) || 0,
           quantity: Number(form.quantity) || 0,
           meterReading: form.meterReading ? Number(form.meterReading) : null,
+          slipUrl,
         }),
       });
       const json = await res.json();
@@ -342,6 +347,13 @@ function FuelForm({
               placeholder="Total km on the dash — not the trip meter"
               onChange={(e) => setForm({ ...form, meterReading: e.target.value })} />
           </L>
+
+          <FileUpload
+            label="Pump slip (optional)"
+            folder="fuel-slips"
+            value={slipUrl}
+            onChange={(u) => setSlipUrl(u ?? '')}
+          />
 
           {rate && (
             <div className="bg-gray-50 rounded-lg p-3 text-sm flex justify-between">

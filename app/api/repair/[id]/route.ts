@@ -33,7 +33,7 @@ export async function PATCH(
 
     const EDITABLE = [
       'category', 'description', 'partsCost', 'labourCost', 'cost', 'odometer',
-      'garage', 'invoiceNo', 'status', 'downtimeDays', 'nextDueDate',
+      'garage', 'invoiceNo', 'billUrl', 'status', 'downtimeDays', 'nextDueDate',
       'nextDueOdometer', 'notes',
     ];
     for (const field of EDITABLE) {

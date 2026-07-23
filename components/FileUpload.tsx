@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Upload, X, FileText, Loader2, ExternalLink } from 'lucide-react';
+import { Upload, X, FileText, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 
 /**
  * Attaches a document or photo to a record.
@@ -91,7 +91,19 @@ export default function FileUpload({
       if (!signed.publicUrl) {
         throw new Error('Uploaded, but the bucket has no public URL configured');
       }
+
+      /*
+       * Replacing: the old file is removed only now that the new one is stored.
+       * Deleting first — which is what "remove, then choose again" did — loses
+       * the original outright if the second upload fails, and the original is
+       * often the only copy of a document.
+       */
+      const previous = value;
       onChange(signed.publicUrl);
+      if (previous && previous !== signed.publicUrl) {
+        fetch(`/api/uploads/sign?url=${encodeURIComponent(previous)}`, { method: 'DELETE' })
+          .catch(() => { /* the record already points at the new file */ });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -132,16 +144,29 @@ export default function FileUpload({
               <FileText className="w-5 h-5 text-gray-400" />
             </span>
           )}
-          <a href={value} target="_blank" rel="noopener noreferrer"
-            className="flex-1 min-w-0 text-sm text-blue-600 hover:underline truncate flex items-center gap-1">
-            {decodeURIComponent(value.split('/').pop() ?? 'file')}
-            <ExternalLink className="w-3 h-3 shrink-0" />
-          </a>
+          <div className="flex-1 min-w-0">
+            <a href={value} target="_blank" rel="noopener noreferrer"
+              className="block text-sm text-blue-600 hover:underline truncate">
+              {decodeURIComponent(value.split('/').pop() ?? 'file')}
+              <ExternalLink className="w-3 h-3 inline ml-1 shrink-0" />
+            </a>
+            {busy && (
+              <span className="block text-[11px] text-gray-500">
+                {progress > 0 ? `Replacing — ${progress}%` : 'Replacing…'}
+              </span>
+            )}
+          </div>
           {!disabled && (
-            <button type="button" onClick={remove} disabled={busy}
-              className="p-1.5 rounded hover:bg-red-50 text-red-500 shrink-0" title="Remove">
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button type="button" onClick={() => input.current?.click()} disabled={busy}
+                className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Replace with another file">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              </button>
+              <button type="button" onClick={remove} disabled={busy}
+                className="p-1.5 rounded hover:bg-red-50 text-red-500" title="Remove">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           )}
         </div>
       ) : (
