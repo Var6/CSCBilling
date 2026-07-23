@@ -22,6 +22,7 @@ import {
   Unlock
 } from 'lucide-react';
 import Link from 'next/link';
+import DriverEditor from '@/components/DriverEditor';
 import { useParams, useRouter } from 'next/navigation';
 
 /* ================= TYPES ================= */
@@ -91,6 +92,7 @@ export default function DriverDetailPage() {
   const [loading, setLoading] = useState(true);
   const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [unlockCode, setUnlockCode] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -302,8 +304,26 @@ export default function DriverDetailPage() {
               <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Driver Details</h1>
               <p style={{ color: '#5A6C7D' }}>View and manage driver information</p>
             </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+            >
+              <Edit className="w-5 h-5" />
+              {isEditing ? 'Cancel Edit' : 'Edit Driver'}
+            </button>
           </div>
         </div>
+
+        {isEditing && (
+          <div className="mb-6">
+            <DriverEditor
+              driver={driver as never}
+              onCancel={() => setIsEditing(false)}
+              onSaved={() => { setIsEditing(false); fetchDriver(); }}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, ArrowLeft, Edit, Plus, Wrench, FileText, DollarSign, Calendar, AlertTriangle, CheckCircle, Clock, TrendingUp, MapPin, X, User, Star, Bell } from 'lucide-react';
 import Link from 'next/link';
+import VehicleEditor from '@/components/VehicleEditor';
 import { useParams, useRouter } from 'next/navigation';
 
 interface Vehicle {
@@ -296,6 +297,16 @@ export default function VehicleDetailPage() {
             </button>
           </div>
         </div>
+
+        {isEditing && (
+          <div className="mb-6">
+            <VehicleEditor
+              vehicle={vehicle as never}
+              onCancel={() => setIsEditing(false)}
+              onSaved={() => { setIsEditing(false); fetchVehicle(); }}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">

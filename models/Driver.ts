@@ -35,6 +35,12 @@ const driverSchema = new Schema<IDriver>(
     /** Usual shift. Individual duties can still differ. */
     defaultShift: { type: String, enum: ['day', 'night', null], default: null },
 
+    /** Scans and photos, stored in R2 — see lib/r2.ts. */
+    photoUrl: { type: String, default: '' },
+    licenseDocUrl: { type: String, default: '' },
+    idProofUrl: { type: String, default: '' },
+    policeVerificationUrl: { type: String, default: '' },
+
     /** False for drivers who have left; keeps their history queryable. */
     active: { type: Boolean, default: true, index: true },
     exitDate: { type: Date, default: null },

@@ -49,6 +49,18 @@ const vehicleSchema = new Schema<IVehicle>({
   fitness: { type: String, default: '' },
   fitnessExpiry: { type: Date, default: null },
   rcNumber: { type: String, required: true },
+
+  /*
+   * Scans of the papers, stored in R2. Held as URLs rather than blobs so the
+   * documents can be shown to a traffic stop from a phone without the console
+   * having to proxy them.
+   */
+  photoUrl: { type: String, default: '' },
+  rcDocUrl: { type: String, default: '' },
+  insuranceDocUrl: { type: String, default: '' },
+  pollutionDocUrl: { type: String, default: '' },
+  fitnessDocUrl: { type: String, default: '' },
+  permitDocUrl: { type: String, default: '' },
   
   // Driver Assignment
   assignedDriverId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },

@@ -14,6 +14,12 @@ export interface IVehicle {
   /** Last 4 digits of the plate — how the fuel and duty books identify a car. */
   shortCode?: string;
   currentOdometer?: number | null;
+  photoUrl?: string;
+  rcDocUrl?: string;
+  insuranceDocUrl?: string;
+  pollutionDocUrl?: string;
+  fitnessDocUrl?: string;
+  permitDocUrl?: string;
   odometerUpdatedAt?: Date | null;
   avgMileage?: number | null;
   totalFuelCost?: number;
@@ -70,6 +76,10 @@ export interface IDriver {
   // ---- Daily book ----
   /** Every spelling of this driver's name seen in the paper registers. */
   aliases?: string[];
+  photoUrl?: string;
+  licenseDocUrl?: string;
+  idProofUrl?: string;
+  policeVerificationUrl?: string;
   /** Cash the driver currently holds for the company (the "Rest Amount"). */
   currentBalance?: number;
   balanceUpdatedAt?: Date | null;
