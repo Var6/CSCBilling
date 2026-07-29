@@ -1,65 +1,88 @@
 import { NextResponse } from 'next/server';
-
-// Reads bookings from the Supabase project shared with the csctravels website and mobile apps.
-// Env vars (set in .env.local and Vercel):
-//   SUPABASE_URL              -> https://<ref>.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY -> service-role key (server-only)
+import { connectDB } from '@/lib/mongodb';
+import Trip from '@/models/Trip';
 
 export const dynamic = 'force-dynamic';
 
+function mapTripToRide(trip: any) {
+  const status = trip.status === 'ongoing' ? 'confirmed' : trip.status;
+
+  return {
+    id: trip._id?.toString() || trip.id?.toString(),
+    customer_name: trip.customer?.name || 'Unknown',
+    phone: trip.customer?.phone || '',
+    email: null,
+    pickup: trip.route?.pickup || '',
+    drop_location: trip.route?.dropoff || '',
+    pickup_at: trip.timing?.tripDate ? new Date(trip.timing.tripDate).toISOString() : new Date().toISOString(),
+    vehicle_type: (trip.vehicle?.model || '').toLowerCase().includes('bus')
+      ? 'bus'
+      : (trip.vehicle?.model || '').toLowerCase().includes('traveler')
+        ? 'traveler'
+        : 'car',
+    trip_type: trip.payment?.method || 'trip',
+    passengers: 1,
+    status,
+    is_scheduled: Boolean(trip.timing?.tripDate),
+    driver_id: trip.driver?.driverId?.toString() || null,
+    distance_km: trip.odometer?.totalKm ?? null,
+    final_fare: trip.charges?.totalFare ?? null,
+    estimated_fare: trip.charges?.totalFare ?? null,
+    created_at: trip.createdAt,
+  };
+}
+
 export async function GET(req: Request) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    return NextResponse.json({ error: 'Supabase env vars not set' }, { status: 500 });
+  try {
+    await connectDB();
+
+    const { searchParams } = new URL(req.url);
+    const onlyScheduled = searchParams.get('scheduled') === '1';
+    const status = searchParams.get('status');
+
+    const query: Record<string, any> = {};
+    if (onlyScheduled) {
+      query.status = { $in: ['pending', 'ongoing'] };
+    }
+    if (status) {
+      query.status = status === 'pending' ? 'pending' : status === 'confirmed' ? 'ongoing' : status;
+    }
+
+    const trips = await Trip.find(query).sort({ createdAt: -1 }).lean();
+    return NextResponse.json(trips.map(mapTripToRide));
+  } catch (error) {
+    console.error('GET /api/rides error:', error);
+    return NextResponse.json({ error: 'Failed to load rides' }, { status: 500 });
   }
-
-  const { searchParams } = new URL(req.url);
-  const onlyScheduled = searchParams.get('scheduled') === '1';
-  const status = searchParams.get('status');
-
-  const params = new URLSearchParams({
-    select: 'id,customer_name,phone,email,pickup,drop_location,pickup_at,vehicle_type,trip_type,passengers,status,is_scheduled,driver_id,distance_km,final_fare,estimated_fare,created_at',
-    order: 'pickup_at.asc',
-    limit: '200',
-  });
-  if (onlyScheduled) params.append('is_scheduled', 'eq.true');
-  if (status) params.append('status', `eq.${status}`);
-
-  const res = await fetch(`${url}/rest/v1/bookings?${params}`, {
-    headers: { apikey: key, Authorization: `Bearer ${key}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    return NextResponse.json({ error: text }, { status: res.status });
-  }
-  return NextResponse.json(await res.json());
 }
 
 export async function PATCH(req: Request) {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    return NextResponse.json({ error: 'Supabase env vars not set' }, { status: 500 });
-  }
-  const body = await req.json();
-  const { id, ...patch } = body ?? {};
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  try {
+    await connectDB();
+    const body = await req.json();
+    const { id, status } = body ?? {};
 
-  const res = await fetch(`${url}/rest/v1/bookings?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
-    },
-    body: JSON.stringify(patch),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    return NextResponse.json({ error: text }, { status: res.status });
+    if (!id) {
+      return NextResponse.json({ error: 'id required' }, { status: 400 });
+    }
+
+    const normalizedStatus = status === 'confirmed'
+      ? 'ongoing'
+      : status === 'completed'
+        ? 'completed'
+        : status === 'cancelled'
+          ? 'cancelled'
+          : 'pending';
+
+    const trip = await Trip.findByIdAndUpdate(id, { status: normalizedStatus }, { new: true }).lean();
+
+    if (!trip) {
+      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(mapTripToRide(trip));
+  } catch (error) {
+    console.error('PATCH /api/rides error:', error);
+    return NextResponse.json({ error: 'Failed to update ride' }, { status: 500 });
   }
-  return NextResponse.json(await res.json());
 }
