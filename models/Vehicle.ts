@@ -17,15 +17,52 @@ const vehicleSchema = new Schema<IVehicle>({
   color: { type: String, default: '' },
   fuelType: { type: String, default: '' },
   mileage: { type: String, default: '0 km' },
-  
+
+  /**
+   * Last 4 digits of the plate. The fuel and duty books identify cars this way
+   * ("6494", "2762"), so imports and quick staff lookups both need it.
+   */
+  shortCode: { type: String, default: '', index: true },
+
+  /** Latest odometer seen from a fuel fill or a completed trip. */
+  currentOdometer: { type: Number, default: null },
+  odometerUpdatedAt: { type: Date, default: null },
+
+  /** Rolling average km per kg/litre, recomputed from consecutive fuel fills. */
+  avgMileage: { type: Number, default: null },
+
+  /** Lifetime fuel spend, so cost-per-km is available without an aggregation. */
+  totalFuelCost: { type: Number, default: 0 },
+  totalRepairCost: { type: Number, default: 0 },
+
+
   // Documents
+  // Document expiries are nullable on purpose. Vehicles carried over from the
+  // paper books have no recorded insurance, pollution or fitness dates, and
+  // making these required meant those rows could not be saved at all — the UI
+  // could not even be used to fill them in. The console shows "not recorded"
+  // and prompts staff instead.
   insurance: { type: String, default: '' },
-  insuranceExpiry: { type: Date, required: true },
+  insuranceExpiry: { type: Date, default: null },
   pollution: { type: String, default: '' },
-  pollutionExpiry: { type: Date, required: true },
+  pollutionExpiry: { type: Date, default: null },
   fitness: { type: String, default: '' },
-  fitnessExpiry: { type: Date, required: true },
+  fitnessExpiry: { type: Date, default: null },
   rcNumber: { type: String, required: true },
+
+  /*
+   * Scans of the papers, stored in R2. Held as URLs rather than blobs so the
+   * documents can be shown to a traffic stop from a phone without the console
+   * having to proxy them.
+   */
+  photoUrl: { type: String, default: '' },
+  // Arrays: an RC book has two sides, and insurance and permits often run to
+  // several pages. Order is meaningful — the first page is the front.
+  rcDocUrls: { type: [String], default: [] },
+  insuranceDocUrls: { type: [String], default: [] },
+  pollutionDocUrls: { type: [String], default: [] },
+  fitnessDocUrls: { type: [String], default: [] },
+  permitDocUrls: { type: [String], default: [] },
   
   // Driver Assignment
   assignedDriverId: { type: Schema.Types.ObjectId, ref: 'Driver', default: null },

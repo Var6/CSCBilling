@@ -15,16 +15,21 @@ interface Vehicle {
   fuelType: string;
   mileage: string;
   insurance: string;
-  insuranceExpiry: string;
+  // Nullable: vehicles carried over from the paper books have no recorded dates.
+  insuranceExpiry: string | null;
   pollution: string;
-  pollutionExpiry: string;
+  pollutionExpiry: string | null;
   fitness: string;
-  fitnessExpiry: string;
+  fitnessExpiry: string | null;
   rcNumber: string;
   assignedDriverName: string | null;
   totalEarnings: number;
   monthlyEarnings: number;
   totalTrips: number;
+  /** Last 4 of the plate — how the books identify this car. */
+  shortCode?: string;
+  company?: string;
+  currentOdometer?: number | null;
 }
 
 export default function VehiclesPage() {
@@ -55,7 +60,10 @@ export default function VehiclesPage() {
     rcNumber: '',
     totalEarnings: 0,
     monthlyEarnings: 0,
-    totalTrips: 0
+    totalTrips: 0,
+    shortCode: '',
+    company: '',
+    currentOdometer: '',
   });
 
   useEffect(() => {
@@ -78,11 +86,19 @@ export default function VehiclesPage() {
     }
   };
 
-  const getInsuranceStatus = (expiryDate: string): 'valid' | 'expiring' | 'expired' => {
-    const today = new Date();
+  /*
+   * 'unknown' is not the same as 'expired'. Vehicles carried over from the
+   * paper books have no recorded dates, and `new Date(null)` is the epoch — so
+   * treating a missing date as a date reported the entire fleet as expired.
+   */
+  const getInsuranceStatus = (
+    expiryDate?: string | null,
+  ): 'valid' | 'expiring' | 'expired' | 'unknown' => {
+    if (!expiryDate) return 'unknown';
     const expiry = new Date(expiryDate);
-    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (Number.isNaN(expiry.getTime())) return 'unknown';
 
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (daysUntilExpiry < 0) return 'expired';
     if (daysUntilExpiry <= 30) return 'expiring';
     return 'valid';
@@ -127,7 +143,10 @@ export default function VehiclesPage() {
       rcNumber: '',
       totalEarnings: 0,
       monthlyEarnings: 0,
-      totalTrips: 0
+      totalTrips: 0,
+      shortCode: '',
+      company: '',
+      currentOdometer: '',
     });
     setShowModal(true);
   };
@@ -152,22 +171,37 @@ export default function VehiclesPage() {
       rcNumber: vehicle.rcNumber,
       totalEarnings: vehicle.totalEarnings || 0,
       monthlyEarnings: vehicle.monthlyEarnings || 0,
-      totalTrips: vehicle.totalTrips || 0
+      totalTrips: vehicle.totalTrips || 0,
+      // Last 4 of the plate — how the fuel and duty books identify this car,
+      // and what the importer matches on.
+      shortCode: vehicle.shortCode || '',
+      company: vehicle.company || '',
+      currentOdometer: vehicle.currentOdometer != null ? String(vehicle.currentOdometer) : '',
     });
     setShowModal(true);
   };
 
   const handleSubmit = async () => {
     try {
-      if (!formData.name || !formData.plate || !formData.model || !formData.rcNumber ||
-          !formData.insuranceExpiry || !formData.pollutionExpiry || !formData.fitnessExpiry) {
-        alert('Please fill in all required fields');
+      /*
+       * Document expiries are deliberately not required. Vehicles carried over
+       * from the paper books have none recorded, and demanding them here meant
+       * the console could not be used to fill in the very rows that needed it.
+       */
+      if (!formData.name || !formData.plate || !formData.model || !formData.rcNumber) {
+        alert('Name, plate, model and RC number are required');
         return;
       }
 
       const payload = {
         ...formData,
         year: Number(formData.year),
+        // Blank means "not recorded", which the model stores as null rather
+        // than an Invalid Date.
+        insuranceExpiry: formData.insuranceExpiry || null,
+        pollutionExpiry: formData.pollutionExpiry || null,
+        fitnessExpiry: formData.fitnessExpiry || null,
+        currentOdometer: formData.currentOdometer === '' ? null : Number(formData.currentOdometer),
         totalEarnings: Number(formData.totalEarnings),
         monthlyEarnings: Number(formData.monthlyEarnings),
         totalTrips: Number(formData.totalTrips)
@@ -206,7 +240,10 @@ export default function VehiclesPage() {
         rcNumber: '',
         totalEarnings: 0,
         monthlyEarnings: 0,
-        totalTrips: 0
+        totalTrips: 0,
+        shortCode: '',
+        company: '',
+        currentOdometer: '',
       });
       
       fetchVehicles();
@@ -236,7 +273,10 @@ export default function VehiclesPage() {
         method: 'DELETE',
       });
 
-      if (!res.ok) throw new Error('Failed to delete vehicle');
+      // The server explains *why* it refused — an assigned driver, or history
+      // that would be orphaned. Throwing a generic message hid all of it.
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to delete vehicle');
 
       setShowDeleteModal(false);
       setVehicleToDelete(null);
@@ -245,7 +285,7 @@ export default function VehiclesPage() {
       alert('Vehicle deleted successfully!');
     } catch (error) {
       console.error('Error deleting vehicle:', error);
-      alert('Failed to delete vehicle');
+      alert(error instanceof Error ? error.message : 'Failed to delete vehicle');
     }
   };
 
@@ -567,6 +607,46 @@ export default function VehiclesPage() {
                     value={formData.mileage}
                     onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
                     placeholder="45,230 km"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>
+                    Book code (last 4 of plate)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.shortCode}
+                    onChange={(e) => setFormData({ ...formData, shortCode: e.target.value })}
+                    placeholder="6494"
+                    title="How the fuel and duty books identify this car. The importer matches on it, so keep it accurate."
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Current Odometer</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.currentOdometer}
+                    onChange={(e) => setFormData({ ...formData, currentOdometer: e.target.value })}
+                    placeholder="31,682"
+                    className="w-full px-3 py-2.5 rounded-lg"
+                    style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: '#1A2332' }}>Company</label>
+                  <input
+                    type="text"
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="CSC Travels"
                     className="w-full px-3 py-2.5 rounded-lg"
                     style={{ border: '1px solid #E5E7EB', color: '#1A2332', outline: 'none' }}
                   />

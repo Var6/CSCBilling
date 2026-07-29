@@ -22,6 +22,7 @@ import {
   Unlock
 } from 'lucide-react';
 import Link from 'next/link';
+import DriverEditor from '@/components/DriverEditor';
 import { useParams, useRouter } from 'next/navigation';
 
 /* ================= TYPES ================= */
@@ -41,6 +42,10 @@ interface Driver {
   address?: string;
   bloodGroup?: string;
   emergencyContact?: string;
+  photoUrl?: string;
+  licenseDocUrl?: string;
+  idProofUrl?: string;
+  policeVerificationUrl?: string;
 }
 
 interface Vehicle {
@@ -50,6 +55,26 @@ interface Vehicle {
   model: string;
   status: 'available' | 'in-use' | 'maintenance';
 }
+
+/* ================= SAFE ACCESSORS ================= */
+
+/*
+ * Rows carried over from the paper books do not carry every field the console
+ * assumes — no rating, no trip count, no assigned driver. Reading them straight
+ * (`driver.rating.toFixed(1)`) threw a TypeError during render, which React
+ * surfaces as "a client-side exception has occurred" and takes down the whole
+ * page. Incomplete data is normal here, so it must never be fatal.
+ */
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+const initials = (name?: string | null) =>
+  (name ?? '')
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
 
 /* ================= PAGE ================= */
 
@@ -71,21 +96,12 @@ export default function DriverDetailPage() {
   const [loading, setLoading] = useState(true);
   const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [unlockCode, setUnlockCode] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [activeTab, setActiveTab] =
     useState<'overview' | 'performance' | 'details'>('overview');
-
-  /* ================= DEBUG ================= */
-
-  useEffect(() => {
-    console.log('================ DEBUG =================');
-    console.log('RAW PARAMS:', params);
-    console.log('RESOLVED DRIVER ID:', driverId);
-    console.log('TYPE:', typeof driverId);
-    console.log('========================================');
-  }, [params, driverId]);
 
   /* ================= DATA FETCH ================= */
 
@@ -102,13 +118,9 @@ export default function DriverDetailPage() {
 
   const fetchDriver = async () => {
     try {
-      console.log('📡 Fetching driver:', driverId);
 
       const res = await fetch(`/api/driver/${driverId}`);
       const data = await res.json();
-
-      console.log('API STATUS:', res.status);
-      console.log('API DATA:', data);
 
       if (!res.ok) throw new Error(data?.error || 'Driver not found');
 
@@ -184,64 +196,52 @@ export default function DriverDetailPage() {
     }
   };
 
+  /*
+   * One call that links both sides.
+   *
+   * This used to PATCH the driver and then PATCH `/api/vehicles/:id` — plural,
+   * where the route is singular. That request 404'd every time, and nothing
+   * checked the response, so the driver pointed at a vehicle that never pointed
+   * back. Everything downstream that needs the pairing — attributing a fuel fill
+   * to a car, or a day's takings to a vehicle — silently had nothing to work
+   * with.
+   */
   const handleAssignVehicle = async (vehicle: Vehicle) => {
     if (!driver || !driverId) return;
 
     try {
-      await fetch(`/api/driver/${driverId}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/driver/${driverId}/assign-vehicle`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          vehicle: `${vehicle.name} - ${vehicle.plate}`,
-          vehicleId: vehicle._id
-        })
+        body: JSON.stringify({ vehicleId: vehicle._id }),
       });
-
-      await fetch(`/api/vehicles/${vehicle._id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignedDriverId: driver._id,
-          assignedDriverName: driver.name,
-          status: 'in-use'
-        })
-      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Could not assign the vehicle');
 
       setShowVehicleModal(false);
       setIsUnlocked(false);
       fetchDriver();
       fetchVehicles();
     } catch (error) {
-      console.error('❌ Error assigning vehicle:', error);
+      console.error('Error assigning vehicle:', error);
+      alert(error instanceof Error ? error.message : 'Could not assign the vehicle');
     }
   };
 
   const handleUnassignVehicle = async () => {
     if (!driver || !driver.vehicleId || !driverId) return;
-
     if (!confirm('Unassign current vehicle?')) return;
 
     try {
-      await fetch(`/api/driver/${driverId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vehicle: null, vehicleId: null })
-      });
-
-      await fetch(`/api/vehicles/${driver.vehicleId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assignedDriverId: null,
-          assignedDriverName: null,
-          status: 'available'
-        })
-      });
+      const res = await fetch(`/api/driver/${driverId}/assign-vehicle`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Could not unassign the vehicle');
 
       fetchDriver();
       fetchVehicles();
     } catch (error) {
-      console.error('❌ Error unassigning vehicle:', error);
+      console.error('Error unassigning vehicle:', error);
+      alert(error instanceof Error ? error.message : 'Could not unassign the vehicle');
     }
   };
 
@@ -296,23 +296,48 @@ export default function DriverDetailPage() {
               <h1 className="text-3xl font-bold mb-1" style={{ color: '#1A2332' }}>Driver Details</h1>
               <p style={{ color: '#5A6C7D' }}>View and manage driver information</p>
             </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium shadow-sm hover:shadow-md transition-all"
+              style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}
+            >
+              <Edit className="w-5 h-5" />
+              {isEditing ? 'Cancel Edit' : 'Edit Driver'}
+            </button>
           </div>
         </div>
+
+        {isEditing && (
+          <div className="mb-6">
+            <DriverEditor
+              driver={driver as never}
+              onCancel={() => setIsEditing(false)}
+              onSaved={() => { setIsEditing(false); fetchDriver(); }}
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             {/* Driver Info Card */}
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #E5E7EB' }}>
               <div className="flex items-start gap-6 mb-6">
-                <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
-                  {driver.name.split(' ').map(n => n[0]).join('')}
-                </div>
+                {driver.photoUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={driver.photoUrl} alt={driver.name}
+                    className="w-24 h-24 rounded-full object-cover shrink-0"
+                    style={{ border: '2px solid #E5E7EB' }} />
+                ) : (
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)' }}>
+                    {initials(driver.name)}
+                  </div>
+                )}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h2 className="text-2xl font-bold" style={{ color: '#1A2332' }}>{driver.name}</h2>
                     <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} flex items-center gap-1`}>
                       <StatusIcon className="w-3 h-3" />
-                      {driver.status.replace('-', ' ').toUpperCase()}
+                      {(driver.status ?? 'offline').replace('-', ' ').toUpperCase()}
                     </span>
                   </div>
                   <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>License: <span className="font-bold" style={{ color: '#1A2332' }}>{driver.license}</span></p>
@@ -368,7 +393,7 @@ export default function DriverDetailPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {[
                         { label: 'Total Trips', value: driver.trips, icon: Car, color: '#2563EB' },
-                        { label: 'Rating', value: `⭐ ${driver.rating.toFixed(1)}`, icon: Star, color: '#F59E0B' },
+                        { label: 'Rating', value: `⭐ ${num(driver.rating).toFixed(1)}`, icon: Star, color: '#F59E0B' },
                         { label: 'Status', value: driver.status, icon: StatusIcon, color: statusStyle.dot }
                       ].map((stat, idx) => (
                         <div key={idx} className="p-4 rounded-lg" style={{ backgroundColor: '#F8F9FA' }}>
@@ -393,7 +418,7 @@ export default function DriverDetailPage() {
                       </div>
                       <div className="p-4 rounded-lg" style={{ border: '1px solid #E5E7EB' }}>
                         <p className="text-sm mb-2" style={{ color: '#5A6C7D' }}>Average Rating</p>
-                        <p className="text-3xl font-bold" style={{ color: '#F59E0B' }}>{driver.rating.toFixed(1)}</p>
+                        <p className="text-3xl font-bold" style={{ color: '#F59E0B' }}>{num(driver.rating).toFixed(1)}</p>
                       </div>
                     </div>
                   </div>
@@ -487,7 +512,7 @@ export default function DriverDetailPage() {
               <div className="space-y-4">
                 {[
                   { label: 'Total Trips', value: driver.trips, icon: Car, color: '#2563EB' },
-                  { label: 'Rating', value: driver.rating.toFixed(1), icon: Star, color: '#F59E0B' },
+                  { label: 'Rating', value: num(driver.rating).toFixed(1), icon: Star, color: '#F59E0B' },
                   { label: 'Status', value: driver.status.replace('-', ' '), icon: StatusIcon, color: statusStyle.dot }
                 ].map((stat, idx) => (
                   <div key={idx} className="flex items-center justify-between">

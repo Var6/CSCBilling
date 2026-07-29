@@ -4,10 +4,27 @@ import { connectDB } from '@/lib/mongodb';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+/**
+ * GET /api/driver?active=true|false|all   (default: true)
+ *
+ * Defaults to current drivers only. Every driver picker in the console — the
+ * daily book, fuel, salary, trip assignment — reads this endpoint, and offering
+ * someone who has been offboarded means work can be booked to a person who has
+ * left. The drivers page passes `all` because it needs both.
+ */
+export async function GET(req: NextRequest) {
   try {
     await connectDB();
-    const drivers = await Driver.find().sort({ createdAt: -1 });
+
+    const active = new URL(req.url).searchParams.get('active') ?? 'true';
+    const filter =
+      active === 'all' ? {}
+      : active === 'false' ? { active: false }
+      // `$ne: false` rather than `true` — rows created before the flag existed
+      // have no `active` field and are still current.
+      : { active: { $ne: false } };
+
+    const drivers = await Driver.find(filter).sort({ createdAt: -1 });
     return NextResponse.json(drivers);
   } catch (err) {
     console.error('Error fetching drivers:', err);

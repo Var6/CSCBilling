@@ -6,30 +6,46 @@ import Sidebar from '@/components/ui/Sidebar';
 import Topbar from '@/components/ui/Topbar';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-// Ensure this matches what Sidebar expects
-interface User {
-  admin_full_name: string;
-  role: string;
-  admin_email: string; // mandatory
-}
-
+/**
+ * Dashboard shell.
+ *
+ * The session check is allowed to fail. Previously this rendered the text
+ * "Checking session…" for as long as `loading` was true, which — combined with
+ * middleware that waved stale cookies through — left the console frozen on that
+ * message with no way out. Now the check has a deadline, and a session that
+ * cannot be confirmed offers a way to start a fresh one rather than trapping
+ * the user.
+ */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, loading } = useCurrentUser() as { user: User | null; loading: boolean };
+  const { user, loading, expired, timedOut, clearSession } = useCurrentUser();
   const router = useRouter();
 
-  // Redirect to login only after the session check completes
+  // A confirmed-signed-out user goes straight to the login page.
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/Auth/login');
-    }
-  }, [user, loading, router]);
+    if (!loading && expired) router.replace('/Auth/login');
+  }, [loading, expired, router]);
 
-  if (loading || !user) {
+  async function startOver() {
+    await clearSession();
+    router.replace('/Auth/login');
+  }
+
+  if (loading) return <SessionLoader />;
+
+  if (!user) {
+    // Reached when the check timed out or errored without a clear 401. Rather
+    // than spin forever, say so and offer a fresh session.
     return (
-      <div className="flex items-center justify-center min-h-screen text-lg text-gray-500">
-        Checking session...
-      </div>
+      <SessionLoader
+        stalled
+        message={
+          timedOut
+            ? 'The session check is taking longer than expected.'
+            : 'We could not confirm your session.'
+        }
+        onStartOver={startOver}
+      />
     );
   }
 
@@ -45,6 +61,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {children}
       </main>
+    </div>
+  );
+}
+
+function SessionLoader({
+  stalled, message, onStartOver,
+}: {
+  stalled?: boolean; message?: string; onStartOver?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#F8F9FA]">
+      <div
+        className="w-10 h-10 rounded-full animate-spin"
+        style={{
+          border: '3px solid #E5E7EB',
+          borderTopColor: '#2563EB',
+        }}
+        role="status"
+        aria-label="Loading"
+      />
+      <p className="text-sm text-gray-500">{message ?? 'Signing you in…'}</p>
+
+      {stalled && onStartOver && (
+        <button
+          onClick={onStartOver}
+          className="px-4 py-2 rounded-lg text-white text-sm font-medium"
+          style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}
+        >
+          Start a new session
+        </button>
+      )}
     </div>
   );
 }

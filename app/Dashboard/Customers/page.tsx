@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import FileUpload from '@/components/FileUpload';
 import { Plus, Search, X, Edit2, Trash2, Users, Phone, Mail, MapPin, UserCheck, UserX, Ban, Download } from 'lucide-react';
 import { exportToExcel } from '@/lib/exportToExcel';
 
@@ -10,6 +11,8 @@ type Customer = {
   email?: string;
   address?: string;
   memberId?: string;
+  /** URL of the uploaded ID scan; older records may hold a bare number. */
+  idProof?: string;
   status: 'active' | 'inactive' | 'banned';
   joinDate?: string;
   totalRides?: number;
@@ -40,6 +43,9 @@ export default function CustomersPage() {
     address: '',
     memberId: '',
     status: 'active' as Customer['status'],
+    // Aadhaar / PAN / voter ID scan. The model already had an idProof field
+    // documented as "URL or number" but nothing could ever put a file in it.
+    idProof: '',
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -72,6 +78,7 @@ export default function CustomersPage() {
       email: c.email || '',
       address: c.address || '',
       memberId: c.memberId || '',
+      idProof: c.idProof || '',
       status: c.status,
     });
     setShowModal(true);
@@ -385,6 +392,15 @@ export default function CustomersPage() {
                   rows={2}
                   className="w-full px-3 py-2.5 rounded-lg border text-sm resize-none"
                   style={{ borderColor: '#E5E7EB', color: '#1A2332' }}
+                />
+              </div>
+
+              <div className="mb-4">
+                <FileUpload
+                  label="ID proof (Aadhaar / PAN / voter ID)"
+                  folder="other"
+                  value={form.idProof}
+                  onChange={(u) => setForm({ ...form, idProof: u ?? '' })}
                 />
               </div>
 

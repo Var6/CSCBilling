@@ -10,14 +10,28 @@ export interface IVehicle {
   color: string;
   fuelType: string;
   mileage: string;
+
+  /** Last 4 digits of the plate — how the fuel and duty books identify a car. */
+  shortCode?: string;
+  currentOdometer?: number | null;
+  photoUrl?: string;
+  rcDocUrls?: string[];
+  insuranceDocUrls?: string[];
+  pollutionDocUrls?: string[];
+  fitnessDocUrls?: string[];
+  permitDocUrls?: string[];
+  odometerUpdatedAt?: Date | null;
+  avgMileage?: number | null;
+  totalFuelCost?: number;
+  totalRepairCost?: number;
   
   // Documents
   insurance: string;
-  insuranceExpiry: Date;
+  insuranceExpiry: Date | null;
   pollution: string;
-  pollutionExpiry: Date;
+  pollutionExpiry: Date | null;
   fitness: string;
-  fitnessExpiry: Date;
+  fitnessExpiry: Date | null;
   rcNumber: string;
   company:string;
   
@@ -58,6 +72,31 @@ export interface IDriver {
   emergencyContact: string;
   baseSalary: number;
   perKmRate: number;
+
+  // ---- Daily book ----
+  /** Every spelling of this driver's name seen in the paper registers. */
+  aliases?: string[];
+  photoUrl?: string;
+  licenseDocUrls?: string[];
+  idProofUrls?: string[];
+  policeVerificationUrls?: string[];
+  /** Cash the driver currently holds for the company (the "Rest Amount"). */
+  currentBalance?: number;
+  balanceUpdatedAt?: Date | null;
+  defaultShift?: 'day' | 'night' | null;
+  active?: boolean;
+  exitDate?: Date | null;
+  exitReason?: string;
+  exitNotes?: string;
+  balanceAtExit?: number | null;
+
+  // ---- Driver mobile app ----
+  passwordHash?: string;
+  /** GeoJSON Point. coordinates are [longitude, latitude]. */
+  location?: { type: 'Point'; coordinates: [number, number] };
+  locationUpdatedAt?: Date | null;
+  onDuty?: boolean;
+  lastSeenAt?: Date | null;
 }
 export interface ICustomer {
     id?: mongoose.Types.ObjectId;

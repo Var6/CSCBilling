@@ -69,6 +69,9 @@ export async function POST(req: Request) {
 
     const res = NextResponse.json({
       success: true,
+      // Returned for the mobile app, which sends it back as a Bearer header.
+      // The web flow ignores this and uses the httpOnly cookie set below.
+      token,
       customer: {
         id: customer._id,
         name: customer.name,

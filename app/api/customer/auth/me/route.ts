@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Customer from "@/models/Customer";
-import { getCustomerFromCookie } from "@/lib/customerAuth";
+import { getCustomer } from "@/lib/customerAuth";
 
-export async function GET() {
-  const payload = await getCustomerFromCookie();
+export async function GET(req: Request) {
+  const payload = await getCustomer(req);
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   await connectDB();
