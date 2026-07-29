@@ -75,7 +75,7 @@ export function computeFare(input: FareInput): FareResult {
     if (pkg && typeof price === 'number') {
       baseLines.push({ label: pkg.label, detail: `${pkg.hours} hours`, amount: price });
     } else {
-      notes.push('No package price configured for this vehicle class.');
+      notes.push('No - package price configured for this vehicle class.');
     }
   } else if (isOutstation(tripKind)) {
     const perKm = (rates.outstation.perKm as Record<string, number>)[vehicle];
