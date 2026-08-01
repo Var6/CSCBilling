@@ -1,88 +1,138 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import Trip from '@/models/Trip';
+import { requireSession } from '@/lib/apiAuth';
 
 export const dynamic = 'force-dynamic';
 
-function mapTripToRide(trip: any) {
-  const status = trip.status === 'ongoing' ? 'confirmed' : trip.status;
+/**
+ * Rides booked by customers — through the csctravels.com website or the
+ * customer app.
+ *
+ * This route used to read a Supabase `bookings` table. That was the old
+ * system: the env vars for it were never set here, so the page answered 500
+ * on every load — and even configured it would have shown nothing, because
+ * the website and app write bookings to the shared Mongo database as Trip
+ * documents (source 'web' or 'app'), not to Supabase.
+ *
+ * The response keeps the field names the Rides page already renders, so the
+ * fix lives entirely on this side.
+ */
 
-  return {
-    id: trip._id?.toString() || trip.id?.toString(),
-    customer_name: trip.customer?.name || 'Unknown',
-    phone: trip.customer?.phone || '',
-    email: null,
-    pickup: trip.route?.pickup || '',
-    drop_location: trip.route?.dropoff || '',
-    pickup_at: trip.timing?.tripDate ? new Date(trip.timing.tripDate).toISOString() : new Date().toISOString(),
-    vehicle_type: (trip.vehicle?.model || '').toLowerCase().includes('bus')
-      ? 'bus'
-      : (trip.vehicle?.model || '').toLowerCase().includes('traveler')
-        ? 'traveler'
-        : 'car',
-    trip_type: trip.payment?.method || 'trip',
-    passengers: 1,
-    status,
-    is_scheduled: Boolean(trip.timing?.tripDate),
-    driver_id: trip.driver?.driverId?.toString() || null,
-    distance_km: trip.odometer?.totalKm ?? null,
-    final_fare: trip.charges?.totalFare ?? null,
-    estimated_fare: trip.charges?.totalFare ?? null,
-    created_at: trip.createdAt,
-  };
-}
+/** Trip statuses collapsed to the four the page knows. */
+const TO_PAGE_STATUS: Record<string, string> = {
+  pending: 'pending',
+  accepted: 'confirmed',
+  ongoing: 'confirmed',
+  completed: 'completed',
+  cancelled: 'cancelled',
+};
 
-export async function GET(req: Request) {
+/** And back again for PATCH. */
+const FROM_PAGE_STATUS: Record<string, string> = {
+  pending: 'pending',
+  confirmed: 'accepted',
+  completed: 'completed',
+  cancelled: 'cancelled',
+};
+
+export async function GET(req: NextRequest) {
+  const auth = requireSession(req);
+  if ('response' in auth) return auth.response;
+
   try {
     await connectDB();
+    const p = new URL(req.url).searchParams;
 
-    const { searchParams } = new URL(req.url);
-    const onlyScheduled = searchParams.get('scheduled') === '1';
-    const status = searchParams.get('status');
+    const filter: Record<string, unknown> = {
+      companyId: auth.companyId,
+      // Customer-originated only. Staff-entered trips and imported offline
+      // invoices have their own screens.
+      source: { $in: ['web', 'app'] },
+    };
 
-    const query: Record<string, any> = {};
-    if (onlyScheduled) {
-      query.status = { $in: ['pending', 'ongoing'] };
+    const status = p.get('status');
+    if (status && FROM_PAGE_STATUS[status]) {
+      filter.status = status === 'confirmed'
+        ? { $in: ['accepted', 'ongoing'] }
+        : FROM_PAGE_STATUS[status];
     }
-    if (status) {
-      query.status = status === 'pending' ? 'pending' : status === 'confirmed' ? 'ongoing' : status;
+
+    // "Scheduled" on this screen means booked but not yet running.
+    if (p.get('scheduled') === '1') {
+      filter.status = { $in: ['pending', 'accepted'] };
     }
 
-    const trips = await Trip.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json(trips.map(mapTripToRide));
-  } catch (error) {
-    console.error('GET /api/rides error:', error);
+    const docs = await Trip.find(filter)
+      .sort({ 'timing.tripDate': 1, createdAt: 1 })
+      .limit(200)
+      .lean<Array<Record<string, any>>>();
+
+    const rides = docs.map((t) => ({
+      id: String(t._id),
+      customer_name: t.customer?.name ?? '—',
+      phone: t.customer?.phone ?? '',
+      email: null,
+      pickup: t.route?.pickup ?? '',
+      drop_location: t.route?.dropoff ?? '',
+      pickup_at: t.timing?.tripDate ?? t.createdAt,
+      vehicle_type: t.pricing?.tripKind ?? 'car',
+      trip_type: t.source === 'web' ? 'website' : 'app',
+      passengers: 1,
+      status: TO_PAGE_STATUS[t.status] ?? 'pending',
+      is_scheduled: t.status === 'pending' || t.status === 'accepted',
+      driver_id: t.driver?.driverId ? String(t.driver.driverId) : null,
+      distance_km: t.distanceKm ?? t.odometer?.totalKm ?? t.route?.estimatedKm ?? null,
+      final_fare: t.charges?.totalFare ?? null,
+      estimated_fare: t.pricing?.estimatedFare ?? null,
+      created_at: t.createdAt,
+    }));
+
+    return NextResponse.json(rides);
+  } catch (err) {
+    console.error('GET /api/rides failed:', err);
     return NextResponse.json({ error: 'Failed to load rides' }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  const auth = requireSession(req);
+  if ('response' in auth) return auth.response;
+
   try {
     await connectDB();
     const body = await req.json();
     const { id, status } = body ?? {};
 
-    if (!id) {
-      return NextResponse.json({ error: 'id required' }, { status: 400 });
+    if (!id || !Types.ObjectId.isValid(String(id))) {
+      return NextResponse.json({ error: 'A valid ride id is required' }, { status: 400 });
+    }
+    const mapped = FROM_PAGE_STATUS[String(status)];
+    if (!mapped) {
+      return NextResponse.json(
+        { error: `status must be one of: ${Object.keys(FROM_PAGE_STATUS).join(', ')}` },
+        { status: 400 },
+      );
     }
 
-    const normalizedStatus = status === 'confirmed'
-      ? 'ongoing'
-      : status === 'completed'
-        ? 'completed'
-        : status === 'cancelled'
-          ? 'cancelled'
-          : 'pending';
-
-    const trip = await Trip.findByIdAndUpdate(id, { status: normalizedStatus }, { new: true }).lean();
-
-    if (!trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+    /*
+     * updateOne rather than save(): the pre-save guard demands a driver,
+     * vehicle and odometer before a trip may be `completed`, which is right
+     * for the dispatch flow but wrong here — staff closing out a website
+     * booking that was fulfilled off-app have none of those to give.
+     */
+    const res = await Trip.updateOne(
+      { _id: id, companyId: auth.companyId, source: { $in: ['web', 'app'] } },
+      { $set: { status: mapped } },
+    );
+    if (res.matchedCount === 0) {
+      return NextResponse.json({ error: 'Ride not found' }, { status: 404 });
     }
 
-    return NextResponse.json(mapTripToRide(trip));
-  } catch (error) {
-    console.error('PATCH /api/rides error:', error);
-    return NextResponse.json({ error: 'Failed to update ride' }, { status: 500 });
+    return NextResponse.json({ ok: true, status });
+  } catch (err) {
+    console.error('PATCH /api/rides failed:', err);
+    return NextResponse.json({ error: 'Failed to update the ride' }, { status: 500 });
   }
 }

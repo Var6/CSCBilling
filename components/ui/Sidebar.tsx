@@ -59,7 +59,14 @@ export default function Sidebar({ sidebarOpen }: SidebarProps) {
       `}
       style={{ borderRight: '1px solid #b1b7bd' }}
     >
-      <div className="pt-20 px-2 space-y-0.5">
+      {/*
+        The menu outgrew the viewport once Daily Book, Fuel, Repairs, Cash Book
+        and Suggestions joined it — items past the fold were simply unreachable,
+        because the aside is fixed and had no overflow. h-full minus the topbar
+        offset keeps the scroll area inside the viewport, and the bottom padding
+        stops the last item hiding under the edge.
+      */}
+      <div className="pt-20 px-2 pb-8 space-y-0.5 h-full overflow-y-auto">
         {menuItems.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;

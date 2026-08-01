@@ -32,6 +32,11 @@ export async function GET(req: NextRequest) {
     if (!driverId || !month) {
       return NextResponse.json({ error: 'driverId and month required' }, { status: 400 });
     }
+    // A malformed id used to reach Mongoose and throw a CastError, which
+    // surfaced as a 500 — this is caller error, not a server fault.
+    if (!/^[0-9a-fA-F]{24}$/.test(driverId)) {
+      return NextResponse.json({ error: 'driverId is not a valid id' }, { status: 400 });
+    }
 
     const [year, mon] = month.split('-').map(Number);
     const start = new Date(year, mon - 1, 1);

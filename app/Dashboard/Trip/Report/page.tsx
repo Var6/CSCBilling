@@ -15,6 +15,7 @@ export default function BookingsPage() {
   const [trips, setTrips] = useState<any[]>([]);
 const [totalTrips, setTotalTrips] = useState(0);
 const [loading, setLoading] = useState(false);
+  const [driverOptions, setDriverOptions] = useState<string[]>([]);
 
   const itemsPerPage = 10;
 
@@ -43,8 +44,11 @@ const data = await res.json()
 
     
 
-    setTrips(data.trips)
-    setTotalTrips(data.total)
+    // Never let a malformed payload leave the arrays undefined — every render
+    // below assumes them.
+    setTrips(Array.isArray(data.trips) ? data.trips : [])
+    setTotalTrips(Number(data.total) || 0)
+    if (Array.isArray(data.drivers)) setDriverOptions(data.drivers)
     setLoading(false)
   }
 
@@ -59,7 +63,8 @@ const displayedTrips = trips
 
  
 
-  const drivers = [...new Set(trips.map(t => t.driver?.name).filter(Boolean))]
+  // Server-provided: every driver in the collection, not just this page's.
+  const drivers = driverOptions
 
 
   const getStatusStyle = (status:any) => {
@@ -236,8 +241,8 @@ const displayedTrips = trips
                           <div className="text-sm" style={{ color: '#9CA3AF' }}>{trip.customer?.phone}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4" style={{ color: '#5A6C7D' }}>{trip.driver?.name}</td>
-                      <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>{trip.vehicle?.model} - {trip.vehicle?.number}</td>
+                      <td className="px-6 py-4" style={{ color: '#5A6C7D' }}>{trip.driver?.name ?? '—'}</td>
+                      <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>{trip.vehicle ? `${trip.vehicle.model} - ${trip.vehicle.number}` : '—'}</td>
                       <td className="px-6 py-4 text-sm" style={{ color: '#5A6C7D' }}>
                         <div>{trip.pickup}</div>
                         <div className="text-xs" style={{ color: '#9CA3AF' }}>→ {trip.dropoff}</div>
@@ -248,11 +253,11 @@ const displayedTrips = trips
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}>
-                          {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
+                          {((trip.status ?? 'pending').charAt(0).toUpperCase() + (trip.status ?? 'pending').slice(1))}
                         </span>
                       </td>
                       <td className="px-6 py-4 font-semibold" style={{ color: '#1A2332' }}>
-                        ₹{trip.fare.toLocaleString('en-IN')}
+                        ₹{(trip.fare ?? 0).toLocaleString('en-IN')}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
