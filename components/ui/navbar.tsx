@@ -38,31 +38,24 @@ function Navbar() {
 
           <div className="hidden md:flex items-center space-x-8">
             <a
-              href="#features"
+              href="https://www.csctravels.com"
               className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
             >
-              Features
+              csctravels.com
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-200"></span>
             </a>
             <a
-              href="#pricing"
+              href="https://www.csctravels.com/booking"
               className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
             >
-              Pricing
+              Book a ride
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-200"></span>
             </a>
             <a
-              href="#solutions"
+              href="tel:+919873101537"
               className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
             >
-              Solutions
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-200"></span>
-            </a>
-            <a
-              href="#resources"
-              className="text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 relative group"
-            >
-              Resources
+              Call us
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-200"></span>
             </a>
           </div>
@@ -75,7 +68,7 @@ function Navbar() {
             </Link>
              <Link href='/Auth/getStarted'>
             <button className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-0.5">
-              Get Started Free
+              Register company
             </button>
             </Link>
           </div>
@@ -95,35 +88,35 @@ function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 py-4 space-y-3">
             <a
-              href="#features"
+              href="https://www.csctravels.com"
               className="block px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              Features
+              csctravels.com
             </a>
             <a
-              href="#pricing"
+              href="https://www.csctravels.com/booking"
               className="block px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              Pricing
+              Book a ride
             </a>
             <a
-              href="#solutions"
+              href="tel:+919873101537"
               className="block px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              Solutions
+              Call us
             </a>
             <a
-              href="#resources"
+              href="/Auth/login"
               className="block px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              Resources
+              Staff sign in
             </a>
             <div className="pt-3 space-y-2 border-t border-gray-200">
               <button className="w-full px-4 py-2.5 text-blue-600 font-medium border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
                 Login
               </button>
               <button className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all">
-                Get Started Free
+                Register company
               </button>
             </div>
           </div>
