@@ -5,6 +5,7 @@ import Customer from '@/models/Customer';
 import Trip from '@/models/Trip';
 import { resolveCompanyId } from '@/lib/tenant';
 import { advanceWave } from '@/lib/dispatch';
+import { makeRideOtps } from '@/lib/otp';
 
 /**
  * Customer ride bookings — the entry point into driver dispatch.
@@ -68,6 +69,8 @@ export async function POST(req: Request) {
     const hasPickupFix = Number.isFinite(Number(pickup.lat)) && Number.isFinite(Number(pickup.lng));
     const hasDropFix = Number.isFinite(Number(dropoff.lat)) && Number.isFinite(Number(dropoff.lng));
 
+    const rideOtps = makeRideOtps();
+
     const trip = await Trip.create({
       companyId,
       source: 'app',
@@ -97,8 +100,9 @@ export async function POST(req: Request) {
       // Placeholder until the driver closes the trip on the meter reading.
       charges: { totalFare: Math.max(0, Number(body?.fareEstimate) || 0) },
       payment: { method: body?.paymentMode === 'upi' ? 'upi' : 'cash', status: 'pending' },
-      // 4-digit handoff code so the driver can confirm the right rider.
-      otp: String(Math.floor(1000 + Math.random() * 9000)),
+      // Start + end handoff codes. The rider shares the start code at pickup and
+      // the end code only if the driver needs to end before the destination.
+      ...rideOtps,
       notes: body?.notes ?? '',
     });
 
@@ -124,6 +128,7 @@ export async function POST(req: Request) {
           tripNumber: trip.tripNumber,
           status: trip.status,
           otp: trip.otp,
+          endOtp: trip.endOtp,
           dispatchedTo: offeredTo.length,
         },
       },
@@ -163,7 +168,9 @@ export async function GET(req: Request) {
         status: t.status,
         fare: t.charges?.totalFare ?? 0,
         distance: t.odometer?.totalKm ?? t.route?.estimatedKm ?? 0,
+        // Both handoff codes are the rider's to share — the driver never sees them.
         otp: t.otp ?? null,
+        endOtp: t.endOtp ?? null,
         paymentMode: t.payment?.method ?? null,
         paymentStatus: t.payment?.status ?? null,
         scheduledAt: t.timing?.tripDate ?? null,

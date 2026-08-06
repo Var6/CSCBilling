@@ -101,12 +101,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       id: String(claimed._id),
       tripNumber: claimed.tripNumber,
       status: claimed.status,
-      // Contact details are released only now that the ride is theirs.
+      // Contact details are released only now that the ride is theirs. The
+      // start OTP is deliberately NOT returned — the driver must ask the rider
+      // for it at pickup, which is what proves the right rider is in the car.
       customerName: claimed.customer?.name,
       customerPhone: claimed.customer?.phone,
       pickup: claimed.route?.pickup,
       dropoff: claimed.route?.dropoff,
-      otp: claimed.otp ?? null,
+      hasOtp: !!claimed.otp,
     },
   });
 }

@@ -3,16 +3,21 @@ import { Types } from 'mongoose';
 import { requireDriver, unauthorized } from '@/lib/driverAuth';
 import Trip from '@/models/Trip';
 import { OdometerError } from '@/lib/odometer';
+import { otpMatches } from '@/lib/otp';
 
 /**
- * POST /api/driver/trips/[id]/start   { startOdometer, lat?, lng? }
+ * POST /api/driver/trips/[id]/start   { startOdometer, otp?, lat?, lng? }
  *
  * Records the opening meter reading and puts the trip on the road.
  *
- * The reading is written exactly once. The guard is in the query, not in an
- * if-statement: the update only matches a trip whose odometer.start is still
- * unset, so a driver cannot start, look at what the fare is going to be, and
- * come back with a more favourable opening number.
+ * Two locks:
+ *  - START OTP: for app/web rides the driver must enter the code the rider
+ *    reads out at pickup. The driver never saw it, so a correct code proves the
+ *    right rider is in the car. Offline rides (driver entered the customer) have
+ *    no code and skip this.
+ *  - WRITE-ONCE odometer: the guard is in the query, not an if — the update only
+ *    matches a trip whose odometer.start is still unset, so a driver cannot
+ *    start, see the fare, and come back with a friendlier opening number.
  */
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +45,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 400 });
+  }
+
+  // Verify the start OTP before touching the trip. Only app/web rides carry one.
+  const existing: any = await Trip.findOne({ _id: id, 'driver.driverId': driver._id }).lean();
+  if (!existing) {
+    return NextResponse.json({ success: false, error: 'Trip not found' }, { status: 404 });
+  }
+  const needsOtp = (existing.source === 'app' || existing.source === 'web') && !!existing.otp;
+  if (needsOtp && !otpMatches(body?.otp, existing.otp)) {
+    return NextResponse.json(
+      { success: false, error: 'Ask the rider for their start OTP and enter it to begin the ride.', otpRequired: true },
+      { status: 403 },
+    );
   }
 
   const lat = Number(body?.lat);
@@ -71,18 +89,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   );
 
   if (!started) {
-    const existing = await Trip.findOne({ _id: id, 'driver.driverId': driver._id }).lean();
-    if (!existing) {
-      return NextResponse.json({ success: false, error: 'Trip not found' }, { status: 404 });
-    }
-    if ((existing as any).odometer?.start != null) {
+    // `existing` was fetched above (pre-update), so it shows why the atomic
+    // write-once update matched nothing.
+    if (existing.odometer?.start != null) {
       return NextResponse.json(
         { success: false, error: 'This trip has already been started. The opening reading cannot be changed.' },
         { status: 409 },
       );
     }
     return NextResponse.json(
-      { success: false, error: `Trip cannot be started from status "${(existing as any).status}"` },
+      { success: false, error: `Trip cannot be started from status "${existing.status}"` },
       { status: 409 },
     );
   }

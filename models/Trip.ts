@@ -146,9 +146,15 @@ const TripSchema = new Schema(
       estimatedFare: { type: Number, default: 0 },
     },
 
-    // 4-digit handoff code so the driver can confirm the rider at pickup.
-    // Generated when a customer books via the public site/mobile app.
+    // Start OTP — the rider reads it to the driver at pickup, and the driver
+    // must enter it to begin the ride. The driver never sees it in their app;
+    // that is the whole point. Generated at booking.
     otp: { type: String },
+
+    // End OTP — a SEPARATE code the rider gives at the drop. Required only to
+    // end a ride BEFORE reaching the destination, so a driver cannot close and
+    // bill a trip early without the rider's say-so. Never shown to the driver.
+    endOtp: { type: String },
 
     notes: String,
   },

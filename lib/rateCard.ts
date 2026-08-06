@@ -19,8 +19,8 @@
  */
 
 export const RATE_CARD = {
-  version: '2026-07-01',
-  effectiveFrom: '2026-07-01',
+  version: '2026-08-06',
+  effectiveFrom: '2026-08-06',
   currency: 'INR' as const,
 
   // ---- 1. Intracity rides (within city limits) ----
@@ -58,15 +58,19 @@ export const RATE_CARD = {
   // Built on the same "vehicle only" principle as the 8-hour package.
   // PLACEHOLDER PRICING beyond the 8h tier — confirm before going live.
   rental: {
+    // 8-hour base rates confirmed by management. Multi-day tiers are still
+    // estimates — adjust here and redeploy; phones pick it up within the hour.
+    // SUV is not offered for self-drive (only hatchback and sedan).
     packages: [
-      { id: 'sd-8h', label: '8 Hours', hours: 8, includedKm: 80, price: { hatchback: 1400, sedan: 1600, suv: 1800 } },
-      { id: 'sd-12h', label: '12 Hours', hours: 12, includedKm: 120, price: { hatchback: 1900, sedan: 2200, suv: 2500 } },
-      { id: 'sd-24h', label: '24 Hours', hours: 24, includedKm: 200, price: { hatchback: 2800, sedan: 3200, suv: 3700 } },
-      { id: 'sd-weekly', label: '7 Days', hours: 168, includedKm: 1200, price: { hatchback: 16000, sedan: 19000, suv: 22000 } },
+      { id: 'sd-8h', label: '8 Hours', hours: 8, includedKm: 80, price: { hatchback: 1500, sedan: 1800 } },
+      { id: 'sd-12h', label: '12 Hours', hours: 12, includedKm: 120, price: { hatchback: 1900, sedan: 2200 } },
+      { id: 'sd-24h', label: '24 Hours', hours: 24, includedKm: 200, price: { hatchback: 2800, sedan: 3200 } },
+      { id: 'sd-weekly', label: '7 Days', hours: 168, includedKm: 1200, price: { hatchback: 16000, sedan: 19000 } },
     ],
-    securityDeposit: { hatchback: 2000, sedan: 3000, suv: 4000 },
-    extraKm: { hatchback: 9, sedan: 11, suv: 13 },
-    extraHour: { hatchback: 180, sedan: 220, suv: 260 },
+    securityDeposit: { hatchback: 2000, sedan: 3000 },
+    extraKm: { hatchback: 9, sedan: 11 },
+    // After the package hours, each extra hour: hatchback ₹120, sedan ₹150.
+    extraHour: { hatchback: 120, sedan: 150 },
     fuelPolicy: 'Fuel is not included. Return the vehicle at the same fuel level as pickup.',
     // PLACEHOLDER hub locations — replace with real pickup points.
     hubs: [

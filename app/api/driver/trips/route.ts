@@ -24,6 +24,10 @@ function shape(t: any) {
     dropoff: t.route?.dropoff ?? '',
     pickupLat: t.route?.pickupPoint?.coordinates?.[1] ?? null,
     pickupLng: t.route?.pickupPoint?.coordinates?.[0] ?? null,
+    // Drop coordinates so the driver app can navigate to the destination once
+    // the ride is ongoing, and decide whether an end-OTP is needed at close.
+    dropLat: t.route?.dropPoint?.coordinates?.[1] ?? null,
+    dropLng: t.route?.dropPoint?.coordinates?.[0] ?? null,
     estimatedKm: t.route?.estimatedKm ?? 0,
     estimatedFare: t.pricing?.estimatedFare ?? 0,
     tripKind: t.pricing?.tripKind ?? null,
@@ -34,7 +38,10 @@ function shape(t: any) {
     totalFare: t.charges?.totalFare ?? 0,
     paymentMethod: t.payment?.method ?? null,
     paymentStatus: t.payment?.status ?? null,
-    otp: t.otp ?? null,
+    // Whether this ride carries handoff codes at all. App/web rides do; offline
+    // rides (driver entered the customer) do not. The codes themselves are NEVER
+    // sent to the driver — that is what makes them proof the rider is present.
+    hasOtp: !!t.otp && (t.source === 'app' || t.source === 'web'),
     flagged: t.integrity?.flagged ?? false,
     createdAt: t.createdAt,
     startedAt: t.odometer?.startAt ?? null,
