@@ -5,6 +5,7 @@ import DailySettlement, { EARNING_CHANNELS } from '@/models/DailySettlement';
 import Driver from '@/models/Driver';
 import Vehicle from '@/models/Vehicle';
 import { requireSession } from '@/lib/apiAuth';
+import { syncCashBookForDates } from '@/lib/cashbookSync';
 import { applyFields, snapshotIfImported, type Amendable } from '@/lib/amend';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ export const dynamic = 'force-dynamic';
 const EDITABLE = [
   'dutyType', 'dutyNote', 'shift',
   'openingBalance', 'fuelExpense', 'tollExpense',
+  'fuelEntries', 'tollEntries',
   'transferToBank', 'cashGiven', 'closingBalance',
   'notes', 'vehicleId',
 ] as const;
@@ -124,6 +126,10 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 
     await syncDriverBalance(auth.companyId, row.driverId as Types.ObjectId);
+    // A date edit moves money between two cash book days; re-derive both.
+    const touched = [row.date as Date];
+    if (body.date !== undefined) touched.push(new Date(body.date));
+    await syncCashBookForDates(auth.companyId, touched);
 
     return NextResponse.json({ ...row.toObject(), originalPreserved: snapshotted });
   } catch (err) {
@@ -155,6 +161,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     if (!row) return NextResponse.json({ error: 'Duty not found' }, { status: 404 });
 
     await syncDriverBalance(auth.companyId, row.driverId as Types.ObjectId);
+    await syncCashBookForDates(auth.companyId, [row.date as Date]);
 
     return NextResponse.json({
       ok: true,

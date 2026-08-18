@@ -68,6 +68,22 @@ const DailySettlementSchema = new Schema(
 
     openingBalance: money,
 
+    /*
+     * Itemised expenses. A duty routinely has several of each — two or three
+     * CNG fills and a toll both ways — and the books used to cram them into
+     * one cell ("470 + 410"). Each line keeps its own amount and note; the
+     * fuelExpense / tollExpense totals below are derived from these whenever
+     * any lines exist, so the itemised and summed views can never disagree.
+     */
+    fuelEntries: {
+      type: [{ _id: false, amount: { type: Number, min: 0 }, note: { type: String, default: '' } }],
+      default: [],
+    },
+    tollEntries: {
+      type: [{ _id: false, amount: { type: Number, min: 0 }, note: { type: String, default: '' } }],
+      default: [],
+    },
+
     earnings: {
       uber: money,
       uberCash: money,
@@ -160,6 +176,18 @@ DailySettlementSchema.index({ companyId: 1, driverId: 1, date: -1 });
 DailySettlementSchema.pre('validate', function () {
   const e = (this.earnings ?? {}) as Record<string, number>;
   const earned = EARNING_CHANNELS.reduce((sum, k) => sum + (Number(e[k]) || 0), 0);
+
+  // Itemised lines are authoritative when present; a lump sum is still allowed
+  // for rows imported from the books, which never itemised.
+  const sumOf = (rows?: Array<{ amount?: number }>) =>
+    (rows ?? []).reduce((a, r) => a + (Number(r?.amount) || 0), 0);
+  if (Array.isArray(this.fuelEntries) && this.fuelEntries.length > 0) {
+    this.fuelExpense = round2(sumOf(this.fuelEntries as Array<{ amount?: number }>));
+  }
+  if (Array.isArray(this.tollEntries) && this.tollEntries.length > 0) {
+    this.tollExpense = round2(sumOf(this.tollEntries as Array<{ amount?: number }>));
+  }
+
   const spent = (Number(this.fuelExpense) || 0) + (Number(this.tollExpense) || 0);
   const inHand = (Number(this.openingBalance) || 0) + earned;
 

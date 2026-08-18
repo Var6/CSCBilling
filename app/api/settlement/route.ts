@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Types } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import DailySettlement, { EARNING_CHANNELS } from '@/models/DailySettlement';
+import Vehicle from '@/models/Vehicle';
+import { syncCashBookForDates } from '@/lib/cashbookSync';
 import Driver from '@/models/Driver';
 import { requireSession, dateRangeFilter, pagination } from '@/lib/apiAuth';
 
@@ -93,7 +95,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'driverId is not a valid id' }, { status: 400 });
     }
 
-    const driver = await Driver.findById(body.driverId).select('name').lean<{ name: string }>();
+    const driver = await Driver.findById(body.driverId)
+      .select('name vehicleId vehicle')
+      .lean<{ name: string; vehicleId?: Types.ObjectId | null; vehicle?: string | null }>();
     if (!driver) return NextResponse.json({ error: 'Driver not found' }, { status: 404 });
 
     // Normalise to a UTC day so a settlement written from any timezone lands on
@@ -106,6 +110,23 @@ export async function POST(req: NextRequest) {
     const earnings = Object.fromEntries(
       EARNING_CHANNELS.map((k) => [k, Math.max(Number(body.earnings?.[k]) || 0, 0)]),
     );
+
+    /*
+     * Itemised expense lines — several fills and several tolls per duty is the
+     * normal case. The totals are summed here and re-derived by the model hook,
+     * so a client that sends only lump sums still works.
+     */
+    const cleanEntries = (rows: unknown) =>
+      Array.isArray(rows)
+        ? rows
+            .map((r) => ({
+              amount: Math.max(Number((r as { amount?: unknown })?.amount) || 0, 0),
+              note: String((r as { note?: unknown })?.note ?? '').slice(0, 120),
+            }))
+            .filter((r) => r.amount > 0)
+        : [];
+    const fuelEntries = cleanEntries(body.fuelEntries);
+    const tollEntries = cleanEntries(body.tollEntries);
 
     const shift = body.shift === 'day' || body.shift === 'night' ? body.shift : null;
 
@@ -120,8 +141,12 @@ export async function POST(req: NextRequest) {
       openingBalance = previous?.closingBalance ?? 0;
     }
 
-    const fuelExpense = Math.max(Number(body.fuelExpense) || 0, 0);
-    const tollExpense = Math.max(Number(body.tollExpense) || 0, 0);
+    const fuelExpense = fuelEntries.length
+      ? fuelEntries.reduce((a, r) => a + r.amount, 0)
+      : Math.max(Number(body.fuelExpense) || 0, 0);
+    const tollExpense = tollEntries.length
+      ? tollEntries.reduce((a, r) => a + r.amount, 0)
+      : Math.max(Number(body.tollExpense) || 0, 0);
     const transferToBank = Math.max(Number(body.transferToBank) || 0, 0);
     const cashGiven = Math.max(Number(body.cashGiven) || 0, 0);
 
@@ -143,12 +168,34 @@ export async function POST(req: NextRequest) {
       ? Number(body.closingBalance) || 0
       : computedClosingBalance;
 
+    /*
+     * The vehicle defaults to whatever this driver is assigned — the pairing
+     * per-vehicle profitability depends on — but an explicit choice wins, since
+     * a driver can take a different car out for a day.
+     */
+    let vehicleId: Types.ObjectId | null =
+      body.vehicleId && Types.ObjectId.isValid(String(body.vehicleId))
+        ? new Types.ObjectId(String(body.vehicleId))
+        : driver.vehicleId ?? null;
+    let vehiclePlate = '';
+    if (vehicleId) {
+      const v = await Vehicle.findById(vehicleId)
+        .select('plate shortCode')
+        .lean<{ plate?: string; shortCode?: string }>();
+      if (v) vehiclePlate = v.plate?.startsWith('PENDING') ? (v.shortCode ?? '') : (v.plate ?? '');
+      else vehicleId = null;
+    }
+
     const doc = {
       companyId: auth.companyId,
       driverId: new Types.ObjectId(body.driverId),
       driverName: driver.name,
       date,
       shift,
+      vehicleId,
+      vehiclePlate,
+      fuelEntries,
+      tollEntries,
       dutyType: body.dutyType ?? 'unknown',
       dutyNote: body.dutyNote ?? '',
       openingBalance,
@@ -191,6 +238,9 @@ export async function POST(req: NextRequest) {
         { $set: { currentBalance: saved.closingBalance, balanceUpdatedAt: date } },
       );
     }
+
+    // The cash book follows the daily book automatically — see lib/cashbookSync.
+    await syncCashBookForDates(auth.companyId, [date]);
 
     return NextResponse.json(saved, { status: 201 });
   } catch (err) {

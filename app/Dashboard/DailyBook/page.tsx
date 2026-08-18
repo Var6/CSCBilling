@@ -416,14 +416,11 @@ function AddDutyForm({
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // An edit opens with the duty as recorded, not a blank form.
   const [form, setForm] = useState({
     date: entry ? entry.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
     driverId: entry?.driverId ?? '',
     dutyType: (entry?.dutyType ?? 'day') as string,
     dutyNote: entry?.dutyNote ?? '',
-    fuelExpense: entry?.fuelExpense ? String(entry.fuelExpense) : '',
-    tollExpense: entry?.tollExpense ? String(entry.tollExpense) : '',
     transferToBank: entry?.transferToBank ? String(entry.transferToBank) : '',
     cashGiven: entry?.cashGiven ? String(entry.cashGiven) : '',
   });
@@ -431,29 +428,97 @@ function AddDutyForm({
     Object.fromEntries(CHANNELS.map(([k]) => [k, entry?.earnings?.[k] ? String(entry.earnings[k]) : ''])),
   );
 
-  // Live preview of the same arithmetic the server will apply, so staff can
-  // see the carried-forward figure before committing the row.
-  const takings = CHANNELS.reduce((a, [k]) => a + (Number(earnings[k]) || 0), 0);
-  const expense = (Number(form.fuelExpense) || 0) + (Number(form.tollExpense) || 0);
+  /*
+   * Itemised expenses. A duty routinely has two or three CNG fills and a toll
+   * both ways; one box per category forced staff to add them up on a phone
+   * calculator first. Each line is amount + optional note, and the totals sum
+   * live.
+   */
+  type Line = { amount: string; note: string };
+  const fromStored = (rows?: { amount: number; note?: string }[], lump?: number): Line[] => {
+    if (rows?.length) return rows.map((r) => ({ amount: String(r.amount), note: r.note ?? '' }));
+    if (lump) return [{ amount: String(lump), note: '' }];
+    return [];
+  };
+  const [fuelLines, setFuelLines] = useState<Line[]>(
+    fromStored((entry as never as { fuelEntries?: { amount: number; note?: string }[] })?.fuelEntries, entry?.fuelExpense),
+  );
+  const [tollLines, setTollLines] = useState<Line[]>(
+    fromStored((entry as never as { tollEntries?: { amount: number; note?: string }[] })?.tollEntries, entry?.tollExpense),
+  );
+
+  /*
+   * Auto-population. Picking a driver pulls their assigned vehicle, their usual
+   * shift, and the float they are currently holding — so the person entering
+   * the book types money, not context the system already knows.
+   */
+  const [prefill, setPrefill] = useState<{
+    vehicle: string | null;
+    openingBalance: number;
+    defaultShift: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!form.driverId || entry) { setPrefill(null); return; }
+    let cancelled = false;
+    fetch(`/api/driver/${form.driverId}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        setPrefill({
+          vehicle: d.vehicle ?? null,
+          openingBalance: Number(d.currentBalance) || 0,
+          defaultShift: d.defaultShift ?? null,
+        });
+        if (d.defaultShift) setForm((f) => ({ ...f, dutyType: d.defaultShift }));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.driverId]);
+
+  /*
+   * A driver on leave earns and spends nothing — asking for eight collection
+   * channels and expense lines on their day off was just noise. Off-duty types
+   * collapse the form to date, driver and a note, and save zeros.
+   */
+  const offDuty = form.dutyType === 'leave' || form.dutyType === 'off';
+
+  const sumLines = (rows: Line[]) => rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const takings = offDuty ? 0 : CHANNELS.reduce((a, [k]) => a + (Number(earnings[k]) || 0), 0);
+  const expense = offDuty ? 0 : sumLines(fuelLines) + sumLines(tollLines);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.driverId) { setError('Pick a driver'); return; }
     setSaving(true); setError(null);
     try {
+      const toEntries = (rows: Line[]) =>
+        rows
+          .map((r) => ({ amount: Number(r.amount) || 0, note: r.note.trim() }))
+          .filter((r) => r.amount > 0);
+
+      const payload = offDuty
+        ? {
+            ...form,
+            earnings: Object.fromEntries(CHANNELS.map(([k]) => [k, 0])),
+            fuelEntries: [], tollEntries: [],
+            fuelExpense: 0, tollExpense: 0,
+            transferToBank: 0, cashGiven: 0,
+          }
+        : {
+            ...form,
+            transferToBank: Number(form.transferToBank) || 0,
+            cashGiven: Number(form.cashGiven) || 0,
+            earnings: Object.fromEntries(CHANNELS.map(([k]) => [k, Number(earnings[k]) || 0])),
+            fuelEntries: toEntries(fuelLines),
+            tollEntries: toEntries(tollLines),
+          };
+
       const res = await fetch(entry ? `/api/settlement/${entry._id}` : '/api/settlement', {
         method: entry ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          fuelExpense: Number(form.fuelExpense) || 0,
-          tollExpense: Number(form.tollExpense) || 0,
-          transferToBank: Number(form.transferToBank) || 0,
-          cashGiven: Number(form.cashGiven) || 0,
-          earnings: Object.fromEntries(
-            CHANNELS.map(([k]) => [k, Number(earnings[k]) || 0]),
-          ),
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? 'Could not save');
@@ -464,6 +529,37 @@ function AddDutyForm({
       setSaving(false);
     }
   }
+
+  const lineEditor = (
+    label: string, lines: Line[], setLines: (l: Line[]) => void, notePlaceholder: string,
+  ) => (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-xs text-gray-500">{rupees(sumLines(lines))}</span>
+      </div>
+      <div className="space-y-2">
+        {lines.map((line, i) => (
+          <div key={i} className="flex gap-2">
+            <input type="number" min="0" step="0.01" placeholder="₹" value={line.amount}
+              onChange={(e) => setLines(lines.map((l, j) => (j === i ? { ...l, amount: e.target.value } : l)))}
+              className="w-28 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            <input placeholder={notePlaceholder} value={line.note}
+              onChange={(e) => setLines(lines.map((l, j) => (j === i ? { ...l, note: e.target.value } : l)))}
+              className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+            <button type="button" onClick={() => setLines(lines.filter((_, j) => j !== i))}
+              className="p-1.5 rounded hover:bg-red-50 text-red-500" title="Remove line">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        <button type="button" onClick={() => setLines([...lines, { amount: '', note: '' }])}
+          className="w-full px-3 py-1.5 rounded-lg border border-dashed border-gray-300 text-xs text-gray-600 hover:bg-gray-50">
+          + Add {label.toLowerCase()} line
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -483,7 +579,7 @@ function AddDutyForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </Field>
             <Field label="Driver">
-              <select required value={form.driverId}
+              <select required value={form.driverId} disabled={Boolean(entry)}
                 onChange={(e) => setForm({ ...form, driverId: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                 <option value="">Select…</option>
@@ -495,68 +591,86 @@ function AddDutyForm({
                 onChange={(e) => setForm({ ...form, dutyType: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
                 {['day', 'night', 'leave', 'off', 'service'].map((t) =>
-                  <option key={t} value={t}>{t}</option>)}
+                  <option key={t} value={t}>{t === 'leave' ? 'leave / absent' : t}</option>)}
               </select>
             </Field>
             <Field label="Note (optional)">
-              <input value={form.dutyNote} placeholder="e.g. 9AM to 10PM"
+              <input value={form.dutyNote} placeholder={offDuty ? 'e.g. medical leave' : 'e.g. 9AM to 10PM'}
                 onChange={(e) => setForm({ ...form, dutyNote: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
             </Field>
           </div>
 
-          <div>
-            <div className="text-sm font-medium text-gray-700 mb-2">Collected</div>
-            <div className="grid grid-cols-4 gap-3">
-              {CHANNELS.map(([key, label]) => (
-                <Field key={key} label={label} small>
-                  <input type="number" min="0" step="0.01" placeholder="0"
-                    value={earnings[key] ?? ''}
-                    onChange={(e) => setEarnings({ ...earnings, [key]: e.target.value })}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-                </Field>
-              ))}
+          {prefill && !offDuty && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 flex flex-wrap gap-x-6 gap-y-1">
+              <span>Vehicle: <strong>{prefill.vehicle ?? 'none assigned'}</strong></span>
+              <span>Carrying forward: <strong>{rupees(prefill.openingBalance)}</strong></span>
+              {prefill.defaultShift && <span>Usual shift: <strong>{prefill.defaultShift}</strong></span>}
             </div>
-          </div>
+          )}
 
-          <div>
-            <div className="text-sm font-medium text-gray-700 mb-2">Spent & handed over</div>
-            <div className="grid grid-cols-4 gap-3">
-              <Field label="Fuel" small>
-                <input type="number" min="0" step="0.01" placeholder="0" value={form.fuelExpense}
-                  onChange={(e) => setForm({ ...form, fuelExpense: e.target.value })}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-              </Field>
-              <Field label="Toll / other" small>
-                <input type="number" min="0" step="0.01" placeholder="0" value={form.tollExpense}
-                  onChange={(e) => setForm({ ...form, tollExpense: e.target.value })}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-              </Field>
-              <Field label="To bank" small>
-                <input type="number" min="0" step="0.01" placeholder="0" value={form.transferToBank}
-                  onChange={(e) => setForm({ ...form, transferToBank: e.target.value })}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-              </Field>
-              <Field label="Cash to office" small>
-                <input type="number" min="0" step="0.01" placeholder="0" value={form.cashGiven}
-                  onChange={(e) => setForm({ ...form, cashGiven: e.target.value })}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
-              </Field>
+          {offDuty ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+              Marked as {form.dutyType === 'leave' ? 'leave / absent' : 'off duty'} — no
+              collections or expenses will be asked for. Their float carries
+              forward unchanged.
             </div>
-          </div>
+          ) : (
+            <>
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">Collected</div>
+                <div className="grid grid-cols-4 gap-3">
+                  {CHANNELS.map(([key, label]) => (
+                    <Field key={key} label={label} small>
+                      <input type="number" min="0" step="0.01" placeholder="0"
+                        value={earnings[key] ?? ''}
+                        onChange={(e) => setEarnings({ ...earnings, [key]: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                    </Field>
+                  ))}
+                </div>
+              </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 space-y-1">
-            <div className="flex justify-between">
-              <span>Takings</span><strong className="text-gray-900">{rupees(takings)}</strong>
-            </div>
-            <div className="flex justify-between">
-              <span>Expenses</span><strong className="text-gray-900">{rupees(expense)}</strong>
-            </div>
-            <div className="text-xs text-gray-400 pt-1">
-              The opening balance carries over from this driver&apos;s previous duty
-              automatically, so the amount carried forward is worked out on save.
-            </div>
-          </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                {lineEditor('Fuel / CNG', fuelLines, setFuelLines, 'e.g. morning fill, IOCL pump')}
+                {lineEditor('Toll & other', tollLines, setTollLines, 'e.g. Didarganj toll, parking')}
+              </div>
+
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">Handed over</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="To bank" small>
+                    <input type="number" min="0" step="0.01" placeholder="0" value={form.transferToBank}
+                      onChange={(e) => setForm({ ...form, transferToBank: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </Field>
+                  <Field label="Cash to office" small>
+                    <input type="number" min="0" step="0.01" placeholder="0" value={form.cashGiven}
+                      onChange={(e) => setForm({ ...form, cashGiven: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm" />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 space-y-1">
+                <div className="flex justify-between">
+                  <span>Takings</span><strong className="text-gray-900">{rupees(takings)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Expenses</span><strong className="text-gray-900">{rupees(expense)}</strong>
+                </div>
+                {prefill && (
+                  <div className="flex justify-between">
+                    <span>Will carry forward</span>
+                    <strong className="text-gray-900">
+                      {rupees(prefill.openingBalance + takings - expense
+                        - (Number(form.transferToBank) || 0) - (Number(form.cashGiven) || 0))}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
@@ -572,7 +686,7 @@ function AddDutyForm({
             <button type="submit" disabled={saving}
               className="px-4 py-2 rounded-lg text-white text-sm font-medium disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #2563EB, #1E40AF)' }}>
-              {saving ? 'Saving…' : entry ? 'Save changes' : 'Save duty'}
+              {saving ? 'Saving…' : entry ? 'Save changes' : offDuty ? 'Mark day' : 'Save duty'}
             </button>
           </div>
         </form>

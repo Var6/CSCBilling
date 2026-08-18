@@ -16,6 +16,17 @@ import bcrypt from 'bcryptjs';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
+/**
+ * Must match lib/mongodb.ts, which passes MONGODB_DB as `dbName`.
+ *
+ * Without this the script connected on the URI alone. Because the connection
+ * string carries no path component, every password it wrote landed in a
+ * database called `test` while the app read from the one named here — so the
+ * credentials appeared to be issued successfully and the driver was still
+ * refused at sign-in, with nothing in either place to explain why.
+ */
+const MONGODB_DB = process.env.MONGODB_DB;
+
 const [phoneArg, passwordArg] = process.argv.slice(2);
 
 if (!MONGODB_URI) {
@@ -41,7 +52,18 @@ const Driver = mongoose.model(
 );
 
 async function main() {
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI, { ...(MONGODB_DB ? { dbName: MONGODB_DB } : {}) });
+
+  // Say which database this landed in. The failure this script had was silent
+  // precisely because it never did.
+  console.log(`· database: ${mongoose.connection.name}`);
+  if (!MONGODB_DB && mongoose.connection.name === 'test') {
+    console.warn(
+      '⚠ MONGODB_DB is not set and the URI names no database, so this is the\n' +
+      '  default `test` database. If the app reads a different one, the password\n' +
+      '  set here will not let the driver sign in. Set MONGODB_DB to match.\n',
+    );
+  }
 
   const driver = await Driver.findOne({ phone });
 

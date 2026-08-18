@@ -136,7 +136,8 @@ export default function CashBookPage() {
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Cash Book</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Company cash and bank movement — salaries, insurance, challans and the rest.
+            Ride income and fuel/toll fill in automatically from the daily book.
+            Salaries, insurance and the rest are yours to enter.
           </p>
         </div>
         <div className="flex gap-2">
@@ -145,7 +146,7 @@ export default function CashBookPage() {
             <Download className="w-4 h-4" /> Export
           </button>
           <button onClick={syncFromDailyBook} disabled={syncing}
-            title="Fill ride income and fuel/toll from the recorded duties"
+            title="Backfill older days — new duties sync in automatically as they are saved"
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40">
             <DownloadCloud className={`w-4 h-4 ${syncing ? 'animate-pulse' : ''}`} />
             {syncing ? 'Building…' : 'Pull from daily book'}
